@@ -2,6 +2,27 @@ version: "3.9"
 
 services:
 
+  # ── Backend FastAPI ────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: restautech_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+      - /app/venv  # Excluir venv local
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - restautech_network
 
   # ── PostgreSQL 15 ──────────────────────────────────────────────
   db:
@@ -21,6 +42,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - restautech_network
 
   # ── Redis 7 ────────────────────────────────────────────────────
   redis:
@@ -36,6 +59,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - restautech_network
+
+networks:
+  restautech_network:
+    driver: bridge
 
 volumes:
   postgres_data:    # Los datos de PostgreSQL persisten aunque reinicies Docker
