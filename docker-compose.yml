@@ -2,6 +2,22 @@ version: "3.9"
 
 services:
 
+  # ── Frontend React + Vite ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: restautech_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - restautech_network
+
   # ── Backend FastAPI ────────────────────────────────────────────
   backend:
     build:
@@ -13,9 +29,13 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      - POSTGRES_HOST=db
+      - REDIS_HOST=redis
+      - FRONTEND_URL=http://localhost:3000
     volumes:
-      - ./backend:/app
-      - /app/venv  # Excluir venv local
+      - ./backend/app:/app/app
+      - ./backend/uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -30,15 +50,15 @@ services:
     container_name: restautech_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: restautech_user
-      POSTGRES_PASSWORD: restautech_pass_2026
-      POSTGRES_DB: restautech_db
+      POSTGRES_USER: ${POSTGRES_USER:-restautech_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-restautech_pass_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-restautech_db}
     ports:
       - "5432:5432"        # Puerto local:puerto contenedor
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U restautech_user -d restautech_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-restautech_user} -d ${POSTGRES_DB:-restautech_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -68,4 +88,4 @@ networks:
 
 volumes:
   postgres_data:    # Los datos de PostgreSQL persisten aunque reinicies Docker
-  redis_data:
+  redis_data:       # Los datos de Redis persisten aunque reinicies Docker
