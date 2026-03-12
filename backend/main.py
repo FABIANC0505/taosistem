@@ -10,9 +10,9 @@ from app.routers import auth, users, products, metrics
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    print("🚀 RestauTech API iniciada")
+    print("RestauTech API iniciada")
     yield
-    print("🛑 RestauTech API detenida")
+    print("RestauTech API detenida")
 
 app = FastAPI(
     title="RestauTech API",
@@ -22,7 +22,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
