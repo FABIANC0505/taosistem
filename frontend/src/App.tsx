@@ -7,7 +7,29 @@ import { UsuariosPage } from './pages/UsuariosPage';
 import { ProductosPage } from './pages/ProductosPage';
 import { DescuentosPage } from './pages/DescuentosPage';
 import { ConfiguracionPage } from './pages/ConfiguracionPage';
+import { PedidosPage } from './pages/mesero/PedidosPage';
+import { NuevoPedidoPage } from './pages/mesero/NuevoPedidoPage';
+import { PedidosCocinaPage } from './pages/cocina/PedidosCocinaPage';
+import { authService } from './services/authService';
 import './index.css';
+
+const HomeRedirect: React.FC = () => {
+  const user = authService.getCurrentUser();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.rol === 'mesero') {
+    return <Navigate to="/mesero/pedidos" replace />;
+  }
+
+  if (user.rol === 'cocina') {
+    return <Navigate to="/cocina/pedidos" replace />;
+  }
+
+  return <Navigate to="/admin" replace />;
+};
 
 function App() {
   return (
@@ -58,9 +80,43 @@ function App() {
           }
         />
 
+        <Route
+          path="/cocina/pedidos"
+          element={
+            <ProtectedRoute requiredRole="cocina">
+              <PedidosCocinaPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/mesero/pedidos"
+          element={
+            <ProtectedRoute requiredRole="mesero">
+              <PedidosPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mesero/pedidos/nuevo"
+          element={
+            <ProtectedRoute requiredRole="mesero">
+              <NuevoPedidoPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mesero/pedidos/:orderId/editar"
+          element={
+            <ProtectedRoute requiredRole="mesero">
+              <NuevoPedidoPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Ruta por defecto */}
-        <Route path="/" element={<Navigate to="/admin" replace />} />
-        <Route path="*" element={<Navigate to="/admin" replace />} />
+        <Route path="/" element={<HomeRedirect />} />
+        <Route path="*" element={<HomeRedirect />} />
       </Routes>
     </BrowserRouter>
   );

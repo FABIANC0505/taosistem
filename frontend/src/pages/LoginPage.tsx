@@ -25,7 +25,13 @@ export const LoginPage: React.FC = () => {
       authService.saveAuth(response.access_token, response.user);
 
       // Redirigir al dashboard
-      navigate('/admin');
+      if (response.user.rol === 'mesero') {
+        navigate('/mesero/pedidos');
+      } else if (response.user.rol === 'cocina') {
+        navigate('/cocina/pedidos');
+      } else {
+        navigate('/admin');
+      }
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || err.message || 'Error al iniciar sesión';
       setError(errorMsg);

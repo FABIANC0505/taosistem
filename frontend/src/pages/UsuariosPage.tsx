@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, Shield, Lock } from 'lucide-react';
+import { Plus, Trash2, Shield, Lock } from 'lucide-react';
 import { AdminLayout } from '../components/AdminLayout';
 import { User, UserRole } from '../types';
 import { userService } from '../services/userService';
@@ -9,7 +9,6 @@ export const UsuariosPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
@@ -63,6 +62,19 @@ export const UsuariosPage: React.FC = () => {
       await loadUsers();
     } catch (err) {
       setError('Error al actualizar rol');
+    }
+  };
+
+  const handleToggleActivo = async (user: User) => {
+    try {
+      if (user.activo) {
+        await userService.deactivate(user.id);
+      } else {
+        await userService.update(user.id, { activo: true });
+      }
+      await loadUsers();
+    } catch (err) {
+      setError('Error al actualizar estado del usuario');
     }
   };
 
@@ -203,8 +215,12 @@ export const UsuariosPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <button className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition">
-                            <Edit2 size={16} />
+                          <button
+                            onClick={() => handleToggleActivo(user)}
+                            className={`p-2 rounded-lg transition ${user.activo ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-green-50 text-green-600'}`}
+                            title={user.activo ? 'Desactivar usuario' : 'Activar usuario'}
+                          >
+                            {user.activo ? <Lock size={16} /> : <Shield size={16} />}
                           </button>
                           <button
                             onClick={() => handleDelete(user.id)}

@@ -9,6 +9,7 @@ export const ProductosPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     nombre: '',
     precio: '',
@@ -34,7 +35,13 @@ export const ProductosPage: React.FC = () => {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setFormData({ nombre: '', precio: '', descripcion: '', categoria: '', imagen: null });
+    setEditingProduct(null);
+    setShowForm(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const form = new FormData();
@@ -46,13 +53,29 @@ export const ProductosPage: React.FC = () => {
         form.append('imagen', formData.imagen);
       }
 
-      await productService.create(form);
-      setFormData({ nombre: '', precio: '', descripcion: '', categoria: '', imagen: null });
-      setShowForm(false);
+      if (editingProduct) {
+        await productService.update(editingProduct.id, form);
+      } else {
+        await productService.create(form);
+      }
+
+      resetForm();
       await loadProducts();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error al crear producto');
+      setError(err.response?.data?.detail || 'Error al guardar producto');
     }
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      nombre: product.nombre,
+      precio: product.precio.toString(),
+      descripcion: product.descripcion || '',
+      categoria: product.categoria,
+      imagen: null,
+    });
+    setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -85,11 +108,17 @@ export const ProductosPage: React.FC = () => {
             <p className="text-gray-600 mt-2">Administra el menú del restaurante</p>
           </div>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              if (showForm && editingProduct) {
+                resetForm();
+              } else {
+                setShowForm(!showForm);
+              }
+            }}
             className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition"
           >
             <Plus size={20} />
-            Nuevo Producto
+            {showForm ? 'Cerrar Formulario' : 'Nuevo Producto'}
           </button>
         </div>
 
@@ -102,8 +131,8 @@ export const ProductosPage: React.FC = () => {
         {/* Formulario */}
         {showForm && (
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Crear Nuevo Producto</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
+            <h3 className="text-lg font-semibold mb-4">{editingProduct ? 'Editar Producto' : 'Crear Nuevo Producto'}</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
                   type="text"
@@ -149,11 +178,11 @@ export const ProductosPage: React.FC = () => {
                   type="submit"
                   className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition"
                 >
-                  Crear
+                  {editingProduct ? 'Guardar Cambios' : 'Crear'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={resetForm}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition"
                 >
                   Cancelar
@@ -195,7 +224,10 @@ export const ProductosPage: React.FC = () => {
                   </div>
                   <p className="text-xs text-gray-500 mt-2">Categoría: {product.categoria}</p>
                   <div className="flex gap-2 mt-4">
-                    <button className="flex-1 p-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => handleEdit(product)}
+                      className="flex-1 p-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition flex items-center justify-center gap-2"
+                    >
                       <Edit2 size={16} />
                       Editar
                     </button>

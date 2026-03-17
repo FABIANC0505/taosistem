@@ -27,7 +27,9 @@ export const userService = {
   },
 
   updateRole: async (id: string, rol: UserRole): Promise<User> => {
-    const response = await api.put(`/users/${id}/role`, { rol });
+    const response = await api.put(`/users/${id}/role`, null, {
+      params: { rol },
+    });
     return response.data;
   },
 

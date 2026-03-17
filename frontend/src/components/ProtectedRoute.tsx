@@ -23,7 +23,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   }
 
   if (requiredRole && user.rol !== requiredRole) {
-    return <Navigate to="/unauthorized" replace />;
+    if (user.rol === 'mesero') {
+      return <Navigate to="/mesero/pedidos" replace />;
+    }
+    if (user.rol === 'cocina') {
+      return <Navigate to="/cocina/pedidos" replace />;
+    }
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;

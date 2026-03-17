@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from app.core.database import get_db
 from app.models.orden import Order, OrderStatus
@@ -78,24 +78,23 @@ async def get_dashboard_metrics(db: AsyncSession = Depends(get_db)):
     except StatisticsError:
         moda_ingresos = media_ingresos
     
-    # Top 10 productos más vendidos
-    stmt = select(
-        Product.nombre,
-        func.count(Order.id).label("cantidad"),
-        func.sum(Order.total_amount).label("ingresos")
-    ).join(
-        Order, True
-    ).group_by(
-        Product.nombre
-    ).order_by(
-        func.count(Order.id).desc()
-    ).limit(10)
-    
-    result = await db.execute(stmt)
+    # Top 10 productos más vendidos (extrae de items JSONB de pedidos entregados)
+    top_sql = text("""
+        SELECT
+            item->>'nombre' AS nombre,
+            SUM((item->>'cantidad')::int) AS cantidad,
+            SUM((item->>'cantidad')::float * (item->>'precio_unitario')::float) AS ingresos
+        FROM orders, jsonb_array_elements(items) AS item
+        WHERE status::text = 'ENTREGADO'
+        GROUP BY item->>'nombre'
+        ORDER BY cantidad DESC
+        LIMIT 10
+    """)
+    result = await db.execute(top_sql)
     productos_top = [
         {
             "nombre": row.nombre,
-            "cantidad": row.cantidad,
+            "cantidad": int(row.cantidad),
             "ingresos": float(row.ingresos) if row.ingresos else 0.0
         }
         for row in result.all()
@@ -145,26 +144,22 @@ async def get_income_trends(days: int = Query(30, ge=1, le=365), db: AsyncSessio
 @router.get("/top-products")
 async def get_top_products(limit: int = Query(10, ge=1, le=50), db: AsyncSession = Depends(get_db)):
     """Obtener productos más vendidos"""
-    
-    # Nota: Esta es una aproximación simplificada
-    # En producción, necesitarías una tabla separada para items de orden
-    stmt = select(
-        Product.nombre,
-        func.count(Order.id).label("cantidad"),
-        func.sum(Order.total_amount).label("ingresos")
-    ).join(
-        Order, True
-    ).group_by(
-        Product.nombre
-    ).order_by(
-        func.count(Order.id).desc()
-    ).limit(limit)
-    
-    result = await db.execute(stmt)
+    top_sql = text("""
+        SELECT
+            item->>'nombre' AS nombre,
+            SUM((item->>'cantidad')::int) AS cantidad,
+            SUM((item->>'cantidad')::float * (item->>'precio_unitario')::float) AS ingresos
+        FROM orders, jsonb_array_elements(items) AS item
+        WHERE status::text = 'ENTREGADO'
+        GROUP BY item->>'nombre'
+        ORDER BY cantidad DESC
+        LIMIT :limit
+    """)
+    result = await db.execute(top_sql, {"limit": limit})
     return [
         {
             "nombre": row.nombre,
-            "cantidad": row.cantidad,
+            "cantidad": int(row.cantidad),
             "ingresos": float(row.ingresos) if row.ingresos else 0.0
         }
         for row in result.all()

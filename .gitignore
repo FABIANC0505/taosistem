@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+.venv/
+env/
+*.egg
+
+# Logs
+*.log
+backend/backend*.log
+backend/test_err*.log
+
+# Uploads (media generada)
+backend/uploads/products/*.png
+backend/uploads/products/*.jpg
+backend/uploads/products/*.jpeg
+backend/uploads/products/*.gif
+backend/uploads/products/*.webp
+
+# Node
+node_modules/
+dist/
+*.local
+
+# Env files (sensibles)
+backend/.env
+backend/.env.production
+frontend/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+backend/package-lock.json

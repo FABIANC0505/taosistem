@@ -51,6 +51,7 @@ export enum OrderStatus {
 
 export interface OrderItem {
   product_id: string;
+  nombre: string;
   cantidad: number;
   precio_unitario: number;
 }

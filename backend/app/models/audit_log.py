@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from sqlalchemy import String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -14,4 +15,4 @@ class AuditLog(Base):
     accion:    Mapped[str] = mapped_column(String(200), nullable=False)
     detalle:   Mapped[str] = mapped_column(Text, nullable=True)
     ip:        Mapped[str] = mapped_column(String(50), nullable=True)
-    created_at:            = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

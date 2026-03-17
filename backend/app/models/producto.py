@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from sqlalchemy import String, Boolean, Numeric, Text, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -20,10 +21,10 @@ class Product(Base):
     # Trazabilidad de agotados (RF7)
     agotado_por: Mapped[str]   = mapped_column(String(36), ForeignKey("users.id"),
                                                nullable=True)
-    agotado_at:                = mapped_column(DateTime(timezone=True), nullable=True)
+    agotado_at:  Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    created_at:                = mapped_column(DateTime(timezone=True),
+    created_at:  Mapped[datetime] = mapped_column(DateTime(timezone=True),
                                                server_default=func.now())
-    updated_at:                = mapped_column(DateTime(timezone=True),
+    updated_at:  Mapped[datetime] = mapped_column(DateTime(timezone=True),
                                                server_default=func.now(),
                                                onupdate=func.now())

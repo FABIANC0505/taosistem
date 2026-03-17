@@ -1,0 +1,191 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, RefreshCw, SquarePen, CircleX, ChefHat, BellRing, CheckCheck } from 'lucide-react';
+import { MeseroLayout } from '../../components/MeseroLayout';
+import { Order, OrderStatus } from '../../types';
+import { ordersService } from '../../services/orders';
+
+const statusStyles: Record<OrderStatus, string> = {
+  [OrderStatus.PENDIENTE]: 'bg-amber-100 text-amber-800 border-amber-200',
+  [OrderStatus.EN_PREPARACION]: 'bg-blue-100 text-blue-800 border-blue-200',
+  [OrderStatus.LISTO]: 'bg-green-100 text-green-800 border-green-200',
+  [OrderStatus.ENTREGADO]: 'bg-gray-100 text-gray-700 border-gray-200',
+  [OrderStatus.CANCELADO]: 'bg-red-100 text-red-700 border-red-200',
+};
+
+const statusLabel: Record<OrderStatus, string> = {
+  [OrderStatus.PENDIENTE]: 'Pendiente',
+  [OrderStatus.EN_PREPARACION]: 'En preparación',
+  [OrderStatus.LISTO]: 'Listo',
+  [OrderStatus.ENTREGADO]: 'Entregado',
+  [OrderStatus.CANCELADO]: 'Cancelado',
+};
+
+export const PedidosPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const activeOrders = useMemo(
+    () => orders.filter((order) => order.status !== OrderStatus.ENTREGADO && order.status !== OrderStatus.CANCELADO),
+    [orders]
+  );
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await ordersService.getAll();
+      setOrders(data);
+    } catch (err) {
+      console.error(err);
+      setError('No se pudieron cargar los pedidos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const setNextStatus = async (order: Order, nextStatus: OrderStatus) => {
+    try {
+      setActionLoading(order.id);
+      await ordersService.updateStatus(order.id, nextStatus);
+      await loadOrders();
+    } catch (err) {
+      console.error(err);
+      setError('No se pudo actualizar el estado del pedido');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const cancelOrder = async (order: Order) => {
+    const motivo = window.prompt('Motivo de cancelación (opcional):') || undefined;
+
+    try {
+      setActionLoading(order.id);
+      await ordersService.cancel(order.id, motivo);
+      await loadOrders();
+    } catch (err) {
+      console.error(err);
+      setError('No se pudo cancelar el pedido');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  return (
+    <MeseroLayout>
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Pedidos en curso</h1>
+            <p className="text-sm text-gray-600 mt-1">Selecciona una tarjeta para editar o actualizar estado</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadOrders}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50"
+            >
+              <RefreshCw size={16} />
+              Recargar
+            </button>
+            <button
+              onClick={() => navigate('/mesero/pedidos/nuevo')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white"
+            >
+              <Plus size={16} />
+              Nuevo pedido
+            </button>
+          </div>
+        </div>
+
+        {error && <div className="p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">{error}</div>}
+
+        {loading ? (
+          <div className="h-40 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+          </div>
+        ) : activeOrders.length === 0 ? (
+          <div className="p-10 text-center rounded-xl border border-dashed border-gray-300 bg-white">
+            <p className="text-gray-600">No hay pedidos activos.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {activeOrders.map((order) => (
+              <article key={order.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-gray-500">Pedido #{order.id.slice(0, 8)}</p>
+                    <h2 className="text-xl font-bold text-gray-900">Mesa {order.mesa_numero}</h2>
+                  </div>
+                  <span className={`px-3 py-1 text-xs rounded-full border font-medium ${statusStyles[order.status]}`}>
+                    {statusLabel[order.status]}
+                  </span>
+                </div>
+
+                <div className="space-y-1 text-sm text-gray-700">
+                  <p>{order.items.reduce((acc, item) => acc + item.cantidad, 0)} productos</p>
+                  <p className="font-semibold text-primary-700">Total: ${Number(order.total_amount).toFixed(2)}</p>
+                  {order.notas ? <p className="text-xs text-gray-500">Nota: {order.notas}</p> : null}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => navigate(`/mesero/pedidos/${order.id}/editar`)}
+                    className="inline-flex justify-center items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    <SquarePen size={16} />
+                    Editar
+                  </button>
+
+                  <button
+                    onClick={() => cancelOrder(order)}
+                    disabled={actionLoading === order.id}
+                    className="inline-flex justify-center items-center gap-2 rounded-lg border border-red-200 text-red-700 px-3 py-2 text-sm hover:bg-red-50 disabled:opacity-60"
+                  >
+                    <CircleX size={16} />
+                    Cancelar
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => setNextStatus(order, OrderStatus.EN_PREPARACION)}
+                    disabled={actionLoading === order.id || order.status === OrderStatus.EN_PREPARACION}
+                    className="inline-flex justify-center items-center gap-1 text-xs px-2 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                  >
+                    <ChefHat size={14} />
+                    Preparar
+                  </button>
+                  <button
+                    onClick={() => setNextStatus(order, OrderStatus.LISTO)}
+                    disabled={actionLoading === order.id || order.status === OrderStatus.LISTO}
+                    className="inline-flex justify-center items-center gap-1 text-xs px-2 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-60"
+                  >
+                    <BellRing size={14} />
+                    Listo
+                  </button>
+                  <button
+                    onClick={() => setNextStatus(order, OrderStatus.ENTREGADO)}
+                    disabled={actionLoading === order.id || order.status === OrderStatus.ENTREGADO}
+                    className="inline-flex justify-center items-center gap-1 text-xs px-2 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+                  >
+                    <CheckCheck size={14} />
+                    Entregar
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </MeseroLayout>
+  );
+};

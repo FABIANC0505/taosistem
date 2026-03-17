@@ -1,6 +1,6 @@
-# RestauTech - Panel Admin de Restaurante
+# RestauTech - Sistema de Gestión de Restaurante
 
-Sistema completo de administración para restaurantes: **Dashboard con métricas (media/moda)**, gestión de usuarios, productos, descuentos y configuración.
+Sistema completo para restaurantes con **tres paneles diferenciados por rol**: administración, meseros y cocina. Incluye gestión de pedidos en tiempo real, dashboard con métricas y control de usuarios/productos.
 
 **Tech Stack:** FastAPI + React + TypeScript + PostgreSQL + Redis
 
@@ -44,49 +44,60 @@ npm run dev
 
 | Componente | URL | Notas |
 |-----------|-----|-------|
-| **Frontend** | http://localhost:3000 | Panel admin |
+| **Frontend** | http://localhost:3000 | Panel según rol |
 | **Backend API** | http://localhost:8000 | API REST |
 | **API Docs** | http://localhost:8000/docs | Swagger UI |
 | **pgAdmin** | http://localhost:5050 | (Solo Docker) |
 
-**Credenciales de Prueba:**
-- Email: `admin@restaurante.com`
-- Password: `admin123`
+**Credenciales por rol:**
 
-> ℹ️ Las credenciales se crean automáticamente con el primer registro.
+| Rol | Redirección | Permisos |
+|-----|-------------|----------|
+| `admin` | `/admin` | Panel completo: usuarios, productos, métricas |
+| `mesero` | `/mesero/pedidos` | Crear/editar/cancelar sus pedidos |
+| `cocina` | `/cocina/pedidos` | Ver todos los pedidos, marcar como entregado |
+
+> ℹ️ El primer usuario registrado puede ser promovido a admin desde `/admin/usuarios`.
 
 ---
 
 ## 🎯 Características Principales
 
-✅ **Dashboard Interactivo**
-- 4 KPI cards (ingresos, órdenes, agotado, top producto)
-- Gráficos de tendencia (Recharts)
+✅ **Panel Admin — Dashboard Interactivo**
+- 4 KPI cards (ingresos totales, órdenes, productos agotados, top producto)
+- Gráfico de tendencia de ingresos (últimos 30 días)
+- Top 10 productos más vendidos calculado de items reales por pedido
 - Cálculo automático de media y moda de ingresos
 
-✅ **Gestión de Usuarios**
-- CRUD completo
-- Roles: Admin, Mesero, Cocina
-- Activar/desactivar usuarios
+✅ **Panel Admin — Gestión de Usuarios**
+- CRUD completo con roles: `admin`, `mesero`, `cocina`
+- Cambio de rol y activar/desactivar usuarios
 
-✅ **Gestión de Productos**
+✅ **Panel Admin — Gestión de Productos**
 - CRUD con upload de imágenes
-- Marcar como agotado
-- Filtrar por categoría
+- Marcar como agotado, filtrar por categoría
 
-✅ **Descuentos & Promociones**
-- Crear códigos de descuento
-- Porcentajes personalizables
+✅ **Panel Mesero — Pedidos**
+- Crear pedidos con ítems, cantidades y notas por mesa
+- Editar pedidos en curso
+- Cancelar pedidos con motivo
+- Ver historial de pedidos propios
 
-✅ **Configuración**
-- Nombre y datos del restaurante
-- Horarios de operación
-- Impuestos y moneda
+✅ **Panel Cocina — Órdenes en Tiempo Real**
+- Visualización de todos los pedidos activos (pendiente / en preparación / listo)
+- Recarga automática cada 10 segundos
+- Marcar pedidos como entregado con un clic
+- Permisos restringidos: no puede editar, cancelar ni eliminar pedidos
 
-✅ **Autenticación**
-- JWT tokens (480 min)
-- Rutas protegidas
-- Cierre de sesión automático
+✅ **Control de Acceso por Rol (RBAC)**
+- JWT tokens con expiración configurable
+- Rutas protegidas en frontend por `requiredRole`
+- Validación en backend: mesero solo gestiona sus pedidos, cocina solo entrega
+- Redirección automática al panel correspondiente tras login
+
+✅ **Descuentos & Configuración**
+- Códigos de descuento con porcentajes personalizables
+- Nombre, horarios, impuestos y moneda del restaurante
 
 ---
 
@@ -97,44 +108,71 @@ taosistem_backend/
 ├── backend/
 │   ├── app/
 │   │   ├── core/          # Configuración, BD, Redis, JWT
-│   │   ├── models/        # Modelos SQLAlchemy
-│   │   ├── routers/       # Endpoints API (auth, users, products, metrics)
+│   │   ├── models/        # Modelos SQLAlchemy (User, Order, Product)
+│   │   ├── routers/       # Endpoints API
+│   │   │   ├── auth.py        # Registro y login
+│   │   │   ├── users.py       # Gestión de usuarios (admin)
+│   │   │   ├── products.py    # Gestión de productos
+│   │   │   ├── orders.py      # Pedidos con RBAC por rol
+│   │   │   └── metrics.py     # Dashboard metrics con JSONB
 │   │   ├── schemas/       # Esquemas Pydantic
 │   │   └── services/      # Lógica de negocio
 │   ├── alembic/           # Migraciones de BD
 │   ├── uploads/           # Imágenes de productos
 │   ├── main.py            # Punto de entrada
 │   ├── requirements.txt   # Dependencias Python
-│   ├── Dockerfile         # Imagen Docker
-│   ├── .env.development   # Variables (localhost)
-│   └── venv/              # Virtual environment
+│   └── Dockerfile
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── components/    # Navbar, Sidebar, AdminLayout
-│   │   ├── pages/         # Login, Dashboard, Usuarios, etc
-│   │   ├── services/      # API clients (auth, users, metrics)
+│   │   ├── components/
+│   │   │   ├── AdminLayout.tsx      # Layout panel admin
+│   │   │   ├── MeseroLayout.tsx     # Layout panel mesero
+│   │   │   ├── CocinaLayout.tsx     # Layout panel cocina
+│   │   │   └── ProtectedRoute.tsx   # Guard de autenticación por rol
+│   │   ├── pages/
+│   │   │   ├── DashboardPage.tsx    # Métricas admin
+│   │   │   ├── UsuariosPage.tsx     # Gestión usuarios
+│   │   │   ├── ProductosPage.tsx    # Gestión productos
+│   │   │   ├── mesero/
+│   │   │   │   ├── PedidosPage.tsx      # Lista de pedidos mesero
+│   │   │   │   └── NuevoPedidoPage.tsx  # Crear/editar pedido
+│   │   │   └── cocina/
+│   │   │       └── PedidosCocinaPage.tsx # Vista orders cocina
+│   │   ├── services/      # API clients (auth, users, products, orders, metrics)
 │   │   ├── hooks/         # useAuth custom hook
-│   │   ├── types/         # TypeScript interfaces
-│   │   ├── utils/         # Axios interceptors
-│   │   └── styles/        # CSS globals
-│   ├── package.json       # Dependencias npm
-│   ├── vite.config.ts     # Vite dev server + proxy
-│   ├── tsconfig.json      # TypeScript config
-│   ├── tailwind.config.js # Tailwind theme
-│   └── .env               # API_URL config
+│   │   ├── types/         # TypeScript interfaces (User, Order, Product, Metrics)
+│   │   └── utils/         # Axios con interceptores JWT
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   └── Dockerfile
 │
-├── docker-compose.yml     # Orquestación de servicios
-├── QUICKSTART.md          # Guía detallada (este archivo)
-├── start-dev.ps1          # Script para desarrollo local
-├── start-docker.ps1       # Script para Docker
-├── setup-db.ps1           # Script para crear BD
-└── README.md              # Este archivo
+├── docker-compose.yml     # Backend + Frontend + PostgreSQL + Redis
+├── start-docker.ps1       # Script arranque Docker
+├── start-dev.ps1          # Script desarrollo local
+└── setup-db.ps1           # Script creación BD
 ```
 
 ---
 
-## 🛠️ Tech Stack Detallado
+## � Modelo de Permisos (RBAC)
+
+| Acción | Admin | Mesero (propio) | Cocina |
+|--------|-------|-----------------|--------|
+| Ver todos los pedidos | ✅ | ❌ (solo suyos) | ✅ |
+| Crear pedido | ✅ | ✅ | ❌ |
+| Editar pedido | ✅ | ✅ | ❌ |
+| Cancelar pedido | ✅ | ✅ | ❌ |
+| Eliminar pedido | ✅ | ✅ | ❌ |
+| Cambiar estado a cualquier valor | ✅ | ✅ | ❌ |
+| Marcar como entregado | ✅ | ✅ | ✅ |
+| Gestionar usuarios/productos | ✅ | ❌ | ❌ |
+| Ver métricas | ✅ | ❌ | ❌ |
+
+---
+
+## �🛠️ Tech Stack Detallado
 
 **Backend:**
 - FastAPI 0.110.0 (Framework)
@@ -210,4 +248,31 @@ docker-compose exec backend alembic upgrade head
 ## 📝 Variables de Entorno
 
 Ver archivo `backend/.env` para configuración completa.
+
+---
+
+## 📋 Changelog
+
+### v1.2.0 — Panel Cocina + Correcciones Admin
+- **Nuevo:** Panel de cocina (`/cocina/pedidos`) con recarga automática cada 10 segundos
+- **Nuevo:** Layout y rutas protegidas para el rol `cocina`
+- **Nuevo:** Endpoint `GET /orders` accesible por cocina (veía todos los pedidos)
+- **Nuevo:** `PATCH /orders/{id}/status` restringido: cocina solo puede marcar `entregado`
+- **Fix:** Dashboard admin `/metrics/dashboard` — error 500 por query SQLAlchemy inválida (`join(Order, True)`)
+- **Fix:** Top productos calculado correctamente desde JSONB de ítems por pedido (`jsonb_array_elements`)
+- **Fix:** Valores de enum PostgreSQL en mayúsculas (`ENTREGADO`) corregidos en queries raw SQL
+- **Fix:** `userService.updateRole` enviaba `rol` en body; corregido a query param
+- **Fix:** Toggle activo de usuario en panel admin conectado correctamente al handler
+- **Fix:** Formulario de productos unificado para crear y editar
+- **Limpieza:** Eliminados archivos scaffold de Vite sin uso (`main.ts`, `counter.ts`, `style.css`, `vite.svg`, `typescript.svg`)
+
+### v1.1.0 — Panel Mesero
+- Panel de mesero con gestión completa de pedidos por mesa
+- Crear, editar, cancelar pedidos
+- Página de nuevo pedido con selector de productos
+
+### v1.0.0 — Panel Admin base
+- Dashboard con KPIs y gráficos (Recharts)
+- Gestión de usuarios, productos, descuentos y configuración
+- Autenticación JWT con rutas protegidas
 
