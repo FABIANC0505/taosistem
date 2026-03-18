@@ -84,6 +84,18 @@ export const DashboardPage: React.FC = () => {
       change: -3,
       icon: <AlertCircle className="text-orange-600" size={24} />,
     },
+    {
+      title: 'Domicilios Semana',
+      value: metrics.domicilios_semana,
+      change: 0,
+      icon: <ShoppingCart className="text-emerald-600" size={24} />,
+    },
+    {
+      title: 'Prep. Promedio',
+      value: `${Math.round(metrics.tiempo_promedio_preparacion_segundos / 60)} min`,
+      change: 0,
+      icon: <TrendingUp className="text-cyan-600" size={24} />,
+    },
   ];
 
   return (
@@ -95,14 +107,12 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-2">Bienvenido al panel de administración</p>
         </div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-6">
           {kpis.map((kpi, idx) => (
             <div key={idx} className="bg-white rounded-lg shadow p-6">
               <div className="flex items-start justify-between">
@@ -119,9 +129,7 @@ export const DashboardPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Tendencia de Ingresos */}
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Tendencia de Ingresos</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -131,18 +139,10 @@ export const DashboardPage: React.FC = () => {
                 <YAxis />
                 <Tooltip formatter={(value) => `$${Number(value).toFixed(2)}`} />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="ingresos"
-                  stroke="#0ea5e9"
-                  strokeWidth={2}
-                  dot={{ fill: '#0ea5e9' }}
-                  name="Ingresos"
-                />
+                <Line type="monotone" dataKey="ingresos" stroke="#0ea5e9" strokeWidth={2} dot={{ fill: '#0ea5e9' }} name="Ingresos" />
               </LineChart>
             </ResponsiveContainer>
 
-            {/* Estadísticas */}
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="bg-blue-50 p-4 rounded-lg">
                 <p className="text-gray-600 text-sm">Media de Ingresos</p>
@@ -155,7 +155,6 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Top Productos */}
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Productos</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -177,7 +176,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Historial de Pedidos Despachados */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Pedidos Despachados por Día</h3>
@@ -188,14 +186,7 @@ export const DashboardPage: React.FC = () => {
                 <YAxis allowDecimals={false} />
                 <Tooltip formatter={(value) => `${value} pedidos`} />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="cantidad"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={{ fill: '#10b981' }}
-                  name="Despachados"
-                />
+                <Line type="monotone" dataKey="cantidad" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} name="Despachados" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -215,17 +206,32 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Producto Más Vendido */}
-        <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-lg shadow p-6 text-white">
-          <h3 className="text-lg font-semibold mb-4">Producto Más Vendido</h3>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-100">Nombre</p>
-              <h4 className="text-2xl font-bold">{metrics.producto_mas_vendido.nombre}</h4>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-lg shadow p-6 text-white">
+            <h3 className="text-lg font-semibold mb-4">Producto Más Vendido</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-100">Nombre</p>
+                <h4 className="text-2xl font-bold">{metrics.producto_mas_vendido.nombre}</h4>
+              </div>
+              <div className="text-right">
+                <p className="text-gray-100">Unidades Vendidas</p>
+                <p className="text-3xl font-bold">{metrics.producto_mas_vendido.cantidad}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-gray-100">Unidades Vendidas</p>
-              <p className="text-3xl font-bold">{metrics.producto_mas_vendido.cantidad}</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tiempos operativos</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <p className="text-gray-600 text-sm">Preparación promedio</p>
+                <p className="text-2xl font-bold text-slate-900">{Math.round(metrics.tiempo_promedio_preparacion_segundos / 60)} min</p>
+              </div>
+              <div className="bg-emerald-50 p-4 rounded-lg">
+                <p className="text-gray-600 text-sm">Tiempo total promedio</p>
+                <p className="text-2xl font-bold text-emerald-700">{Math.round(metrics.tiempo_promedio_entrega_segundos / 60)} min</p>
+              </div>
             </div>
           </div>
         </div>

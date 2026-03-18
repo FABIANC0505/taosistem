@@ -7,8 +7,11 @@ import { UsuariosPage } from './pages/UsuariosPage';
 import { ProductosPage } from './pages/ProductosPage';
 import { DescuentosPage } from './pages/DescuentosPage';
 import { ConfiguracionPage } from './pages/ConfiguracionPage';
+import { OrderHistoryAdminPage } from './pages/OrderHistoryAdminPage';
 import { PedidosPage } from './pages/mesero/PedidosPage';
+import { DomiciliosPage } from './pages/mesero/DomiciliosPage';
 import { NuevoPedidoPage } from './pages/mesero/NuevoPedidoPage';
+import { HistorialCocinaPage } from './pages/cocina/HistorialCocinaPage';
 import { PedidosCocinaPage } from './pages/cocina/PedidosCocinaPage';
 import { authService } from './services/authService';
 import './index.css';
@@ -80,12 +83,28 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/historial"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <OrderHistoryAdminPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/cocina/pedidos"
           element={
             <ProtectedRoute requiredRole="cocina">
               <PedidosCocinaPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cocina/historial"
+          element={
+            <ProtectedRoute requiredRole="cocina">
+              <HistorialCocinaPage />
             </ProtectedRoute>
           }
         />
@@ -103,6 +122,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="mesero">
               <NuevoPedidoPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mesero/domicilios"
+          element={
+            <ProtectedRoute requiredRole="mesero">
+              <DomiciliosPage />
             </ProtectedRoute>
           }
         />

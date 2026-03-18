@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, SquarePen, CircleX, ChefHat, BellRing, CheckCheck } from 'lucide-react';
+import { Plus, RefreshCw, SquarePen, CircleX, CheckCheck, Bike } from 'lucide-react';
 import { MeseroLayout } from '../../components/MeseroLayout';
-import { Order, OrderStatus } from '../../types';
+import { Order, OrderStatus, OrderType } from '../../types';
 import { ordersService } from '../../services/orders';
 
 const statusStyles: Record<OrderStatus, string> = {
@@ -16,7 +16,7 @@ const statusStyles: Record<OrderStatus, string> = {
 const statusLabel: Record<OrderStatus, string> = {
   [OrderStatus.PENDIENTE]: 'Pendiente',
   [OrderStatus.EN_PREPARACION]: 'En preparación',
-  [OrderStatus.LISTO]: 'Listo',
+  [OrderStatus.LISTO]: 'Listo para entregar',
   [OrderStatus.ENTREGADO]: 'Entregado',
   [OrderStatus.CANCELADO]: 'Cancelado',
 };
@@ -49,16 +49,18 @@ export const PedidosPage: React.FC = () => {
 
   useEffect(() => {
     loadOrders();
+    const interval = setInterval(loadOrders, 10000);
+    return () => clearInterval(interval);
   }, []);
 
-  const setNextStatus = async (order: Order, nextStatus: OrderStatus) => {
+  const confirmDelivery = async (order: Order) => {
     try {
       setActionLoading(order.id);
-      await ordersService.updateStatus(order.id, nextStatus);
+      await ordersService.updateStatus(order.id, OrderStatus.ENTREGADO);
       await loadOrders();
     } catch (err) {
       console.error(err);
-      setError('No se pudo actualizar el estado del pedido');
+      setError('No se pudo confirmar la entrega');
     } finally {
       setActionLoading(null);
     }
@@ -85,7 +87,7 @@ export const PedidosPage: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Pedidos en curso</h1>
-            <p className="text-sm text-gray-600 mt-1">Selecciona una tarjeta para editar o actualizar estado</p>
+            <p className="text-sm text-gray-600 mt-1">Mesero crea, cocina prepara y aquí confirmas la entrega final al cliente</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -95,6 +97,13 @@ export const PedidosPage: React.FC = () => {
             >
               <RefreshCw size={16} />
               Recargar
+            </button>
+            <button
+              onClick={() => navigate('/mesero/domicilios')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-200 text-primary-700 bg-primary-50 hover:bg-primary-100"
+            >
+              <Bike size={16} />
+              Ver domicilios
             </button>
             <button
               onClick={() => navigate('/mesero/pedidos/nuevo')}
@@ -123,7 +132,12 @@ export const PedidosPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-xs text-gray-500">Pedido #{order.id.slice(0, 8)}</p>
-                    <h2 className="text-xl font-bold text-gray-900">Mesa {order.mesa_numero}</h2>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      {order.tipo_pedido === OrderType.DOMICILIO ? order.cliente_nombre || 'Domicilio' : `Mesa ${order.mesa_numero}`}
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {order.tipo_pedido === OrderType.DOMICILIO ? order.direccion_entrega : 'Servicio en mesa'}
+                    </p>
                   </div>
                   <span className={`px-3 py-1 text-xs rounded-full border font-medium ${statusStyles[order.status]}`}>
                     {statusLabel[order.status]}
@@ -139,7 +153,8 @@ export const PedidosPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => navigate(`/mesero/pedidos/${order.id}/editar`)}
-                    className="inline-flex justify-center items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                    disabled={order.status !== OrderStatus.PENDIENTE}
+                    className="inline-flex justify-center items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
                   >
                     <SquarePen size={16} />
                     Editar
@@ -147,7 +162,7 @@ export const PedidosPage: React.FC = () => {
 
                   <button
                     onClick={() => cancelOrder(order)}
-                    disabled={actionLoading === order.id}
+                    disabled={actionLoading === order.id || order.status === OrderStatus.ENTREGADO}
                     className="inline-flex justify-center items-center gap-2 rounded-lg border border-red-200 text-red-700 px-3 py-2 text-sm hover:bg-red-50 disabled:opacity-60"
                   >
                     <CircleX size={16} />
@@ -155,32 +170,14 @@ export const PedidosPage: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => setNextStatus(order, OrderStatus.EN_PREPARACION)}
-                    disabled={actionLoading === order.id || order.status === OrderStatus.EN_PREPARACION}
-                    className="inline-flex justify-center items-center gap-1 text-xs px-2 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-60"
-                  >
-                    <ChefHat size={14} />
-                    Preparar
-                  </button>
-                  <button
-                    onClick={() => setNextStatus(order, OrderStatus.LISTO)}
-                    disabled={actionLoading === order.id || order.status === OrderStatus.LISTO}
-                    className="inline-flex justify-center items-center gap-1 text-xs px-2 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-60"
-                  >
-                    <BellRing size={14} />
-                    Listo
-                  </button>
-                  <button
-                    onClick={() => setNextStatus(order, OrderStatus.ENTREGADO)}
-                    disabled={actionLoading === order.id || order.status === OrderStatus.ENTREGADO}
-                    className="inline-flex justify-center items-center gap-1 text-xs px-2 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-                  >
-                    <CheckCheck size={14} />
-                    Entregar
-                  </button>
-                </div>
+                <button
+                  onClick={() => confirmDelivery(order)}
+                  disabled={actionLoading === order.id || order.status !== OrderStatus.LISTO}
+                  className="w-full inline-flex justify-center items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white disabled:opacity-60"
+                >
+                  <CheckCheck size={16} />
+                  Confirmar entrega al cliente
+                </button>
               </article>
             ))}
           </div>

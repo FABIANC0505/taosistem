@@ -3,7 +3,7 @@
 # ============================================
 # Usage: .\start-backend.ps1
 
-Write-Host "`nStarting BACKEND (API + PostgreSQL + Redis)..." -ForegroundColor Cyan
+Write-Host "`nStarting BACKEND (API + PostgreSQL)..." -ForegroundColor Cyan
 Write-Host "================================================`n" -ForegroundColor Cyan
 
 $composeFile = "docker-compose.backend.yml"

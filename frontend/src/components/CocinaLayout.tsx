@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ChefHat, LogOut, Menu, X } from 'lucide-react';
+import { ChefHat, History, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface CocinaLayoutProps {
@@ -9,6 +9,7 @@ interface CocinaLayoutProps {
 
 const navItems = [
   { label: 'Pedidos cocina', href: '/cocina/pedidos', icon: <ChefHat size={20} /> },
+  { label: 'Historial', href: '/cocina/historial', icon: <History size={20} /> },
 ];
 
 export const CocinaLayout: React.FC<CocinaLayoutProps> = ({ children }) => {

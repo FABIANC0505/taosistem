@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardList, PlusSquare, LogOut, Menu, X } from 'lucide-react';
+import { ClipboardList, PlusSquare, Bike, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface MeseroLayoutProps {
@@ -10,6 +10,7 @@ interface MeseroLayoutProps {
 const navItems = [
   { label: 'Pedidos', href: '/mesero/pedidos', icon: <ClipboardList size={20} /> },
   { label: 'Nuevo pedido', href: '/mesero/pedidos/nuevo', icon: <PlusSquare size={20} /> },
+  { label: 'Domicilios', href: '/mesero/domicilios', icon: <Bike size={20} /> },
 ];
 
 export const MeseroLayout: React.FC<MeseroLayoutProps> = ({ children }) => {

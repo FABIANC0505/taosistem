@@ -11,13 +11,10 @@ services:
       - ./backend/.env
     environment:
       - POSTGRES_HOST=db
-      - REDIS_HOST=redis
     volumes:
       - ./backend/uploads:/app/uploads
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - restautech_backend_network
@@ -42,26 +39,9 @@ services:
     networks:
       - restautech_backend_network
 
-  redis:
-    image: redis:7-alpine
-    container_name: restautech_redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - restautech_backend_network
-
 networks:
   restautech_backend_network:
     driver: bridge
 
 volumes:
   postgres_data:
-  redis_data:

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   BarChart3,
+  History,
   Users,
   UtensilsCrossed,
   Tag,
@@ -27,6 +28,7 @@ const navItems: NavItem[] = [
   { label: 'Productos', href: '/admin/productos', icon: <UtensilsCrossed size={20} /> },
   { label: 'Descuentos', href: '/admin/descuentos', icon: <Tag size={20} /> },
   { label: 'Configuración', href: '/admin/configuracion', icon: <Settings size={20} /> },
+  { label: 'Historial', href: '/admin/historial', icon: <History size={20} /> },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
@@ -35,7 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
 
   return (
     <>
-      {/* Overlay móvil */}
       {open && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-30"
@@ -43,7 +44,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
@@ -51,7 +51,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
         style={{ marginTop: '60px' }}
       >
         <div className="p-6 flex flex-col gap-6">
-          {/* Botón cerrar móvil */}
           <button
             onClick={onClose}
             className="lg:hidden absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg"
@@ -59,7 +58,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
             <X size={20} />
           </button>
 
-          {/* Navegación */}
           <nav className="space-y-2 mt-8 lg:mt-0">
             {navItems.map((item) => (
               <Link

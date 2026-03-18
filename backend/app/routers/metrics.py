@@ -98,6 +98,9 @@ class MetricsResponse(BaseModel):
     productos_top: List[dict]
     dispatched_por_dia: List[DispatchedByDayPoint]
     dispatched_por_mes: List[DispatchedByMonthPoint]
+    domicilios_semana: int
+    tiempo_promedio_preparacion_segundos: float
+    tiempo_promedio_entrega_segundos: float
 
 @router.get("/dashboard", response_model=MetricsResponse)
 async def get_dashboard_metrics(
@@ -126,6 +129,15 @@ async def get_dashboard_metrics(
     )
     result = await db.execute(stmt)
     ordenes_hoy = result.scalar()
+
+    week_start = datetime.now() - timedelta(days=datetime.now().weekday())
+    domicilios_stmt = select(func.count(Order.id)).where(
+        Order.tipo_pedido == "domicilio",
+        Order.status == OrderStatus.ENTREGADO,
+        Order.created_at >= week_start,
+    )
+    result = await db.execute(domicilios_stmt)
+    domicilios_semana = result.scalar() or 0
     
     # Productos agotados
     stmt = select(func.count(Product.id)).where(Product.disponible == False)
@@ -187,6 +199,31 @@ async def get_dashboard_metrics(
             "nombre": productos_top[0]["nombre"],
             "cantidad": productos_top[0]["cantidad"]
         }
+
+    prep_stmt = select(
+        func.coalesce(
+            func.avg(func.extract("epoch", Order.served_at - Order.cocinando_at)),
+            0,
+        )
+    ).where(
+        Order.status == OrderStatus.ENTREGADO,
+        Order.cocinando_at.is_not(None),
+        Order.served_at.is_not(None),
+    )
+    result = await db.execute(prep_stmt)
+    tiempo_promedio_preparacion = float(result.scalar() or 0)
+
+    total_stmt = select(
+        func.coalesce(
+            func.avg(func.extract("epoch", Order.entregado_at - Order.created_at)),
+            0,
+        )
+    ).where(
+        Order.status == OrderStatus.ENTREGADO,
+        Order.entregado_at.is_not(None),
+    )
+    result = await db.execute(total_stmt)
+    tiempo_promedio_entrega = float(result.scalar() or 0)
     
     return MetricsResponse(
         total_ingresos=total_ingresos,
@@ -200,6 +237,9 @@ async def get_dashboard_metrics(
         productos_top=productos_top,
         dispatched_por_dia=dispatched_history["dispatched_por_dia"],
         dispatched_por_mes=dispatched_history["dispatched_por_mes"],
+        domicilios_semana=domicilios_semana,
+        tiempo_promedio_preparacion_segundos=tiempo_promedio_preparacion,
+        tiempo_promedio_entrega_segundos=tiempo_promedio_entrega,
     )
 
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Minus, Plus, Trash2, Save, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Minus, Plus, Trash2, Save, ArrowLeft, ShoppingCart, Bike, Store } from 'lucide-react';
 import { MeseroLayout } from '../../components/MeseroLayout';
-import { Product } from '../../types';
+import { OrderType, Product } from '../../types';
 import { productService } from '../../services/productService';
 import { OrderItemPayload, ordersService } from '../../services/orders';
 
@@ -13,10 +13,16 @@ const mesasRapidas = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 export const NuevoPedidoPage: React.FC = () => {
   const navigate = useNavigate();
   const { orderId } = useParams();
+  const [searchParams] = useSearchParams();
   const isEditing = Boolean(orderId);
+  const initialType = searchParams.get('tipo') === OrderType.DOMICILIO ? OrderType.DOMICILIO : OrderType.MESA;
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [tipoPedido, setTipoPedido] = useState<OrderType>(initialType);
   const [mesaNumero, setMesaNumero] = useState<number>(1);
+  const [clienteNombre, setClienteNombre] = useState('');
+  const [clienteTelefono, setClienteTelefono] = useState('');
+  const [direccionEntrega, setDireccionEntrega] = useState('');
   const [notas, setNotas] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +51,11 @@ export const NuevoPedidoPage: React.FC = () => {
 
       if (orderId) {
         const order = await ordersService.getById(orderId);
-        setMesaNumero(order.mesa_numero);
+        setTipoPedido(order.tipo_pedido);
+        setMesaNumero(order.mesa_numero || 1);
+        setClienteNombre(order.cliente_nombre || '');
+        setClienteTelefono(order.cliente_telefono || '');
+        setDireccionEntrega(order.direccion_entrega || '');
         setNotas(order.notas || '');
         setCart(
           order.items.map((item) => ({
@@ -103,23 +113,40 @@ export const NuevoPedidoPage: React.FC = () => {
     setCart((prev) => prev.filter((item) => item.product_id !== productId));
   };
 
-  const handleSave = async () => {
-    if (!mesaNumero || mesaNumero < 1) {
+  const validateForm = () => {
+    if (tipoPedido === OrderType.MESA && (!mesaNumero || mesaNumero < 1)) {
       setError('Selecciona una mesa válida');
-      return;
+      return false;
+    }
+
+    if (tipoPedido === OrderType.DOMICILIO) {
+      if (!clienteNombre.trim() || !clienteTelefono.trim() || !direccionEntrega.trim()) {
+        setError('Para domicilios debes completar cliente, teléfono y dirección');
+        return false;
+      }
     }
 
     if (cart.length === 0) {
       setError('Agrega al menos un producto al pedido');
-      return;
+      return false;
     }
+
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
 
     try {
       setSaving(true);
       setError('');
 
       const payload = {
-        mesa_numero: mesaNumero,
+        tipo_pedido: tipoPedido,
+        mesa_numero: tipoPedido === OrderType.MESA ? mesaNumero : undefined,
+        cliente_nombre: tipoPedido === OrderType.DOMICILIO ? clienteNombre.trim() : undefined,
+        cliente_telefono: tipoPedido === OrderType.DOMICILIO ? clienteTelefono.trim() : undefined,
+        direccion_entrega: tipoPedido === OrderType.DOMICILIO ? direccionEntrega.trim() : undefined,
         items: cart,
         notas: notas || undefined,
       };
@@ -130,7 +157,7 @@ export const NuevoPedidoPage: React.FC = () => {
         await ordersService.create(payload);
       }
 
-      navigate('/mesero/pedidos');
+      navigate(tipoPedido === OrderType.DOMICILIO ? '/mesero/domicilios' : '/mesero/pedidos');
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.detail || 'No se pudo guardar el pedido');
@@ -148,7 +175,7 @@ export const NuevoPedidoPage: React.FC = () => {
     try {
       setSaving(true);
       await ordersService.delete(orderId);
-      navigate('/mesero/pedidos');
+      navigate(tipoPedido === OrderType.DOMICILIO ? '/mesero/domicilios' : '/mesero/pedidos');
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.detail || 'No se pudo eliminar el pedido');
@@ -172,11 +199,11 @@ export const NuevoPedidoPage: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <button
-            onClick={() => navigate('/mesero/pedidos')}
+            onClick={() => navigate(tipoPedido === OrderType.DOMICILIO ? '/mesero/domicilios' : '/mesero/pedidos')}
             className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900"
           >
             <ArrowLeft size={18} />
-            Volver a pedidos
+            Volver
           </button>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
             {isEditing ? 'Editar pedido' : 'Nuevo pedido'}
@@ -187,31 +214,85 @@ export const NuevoPedidoPage: React.FC = () => {
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <section className="xl:col-span-2 bg-white rounded-xl border border-gray-200 p-4 sm:p-5 space-y-4">
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Mesa</p>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {mesasRapidas.map((mesa) => (
-                  <button
-                    key={mesa}
-                    onClick={() => setMesaNumero(mesa)}
-                    className={`px-3 py-2 rounded-lg border text-sm ${
-                      mesaNumero === mesa
-                        ? 'bg-primary-100 text-primary-700 border-primary-200'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    Mesa {mesa}
-                  </button>
-                ))}
-              </div>
-              <input
-                type="number"
-                min={1}
-                value={mesaNumero}
-                onChange={(event) => setMesaNumero(Number(event.target.value || 1))}
-                className="w-full md:w-44 px-3 py-2 border border-gray-300 rounded-lg"
-              />
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setTipoPedido(OrderType.MESA)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
+                  tipoPedido === OrderType.MESA ? 'bg-primary-100 text-primary-700 border-primary-200' : 'border-gray-300 text-gray-700'
+                }`}
+              >
+                <Store size={16} />
+                Mesa
+              </button>
+              <button
+                onClick={() => setTipoPedido(OrderType.DOMICILIO)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
+                  tipoPedido === OrderType.DOMICILIO ? 'bg-primary-100 text-primary-700 border-primary-200' : 'border-gray-300 text-gray-700'
+                }`}
+              >
+                <Bike size={16} />
+                Domicilio
+              </button>
             </div>
+
+            {tipoPedido === OrderType.MESA ? (
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Mesa</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {mesasRapidas.map((mesa) => (
+                    <button
+                      key={mesa}
+                      onClick={() => setMesaNumero(mesa)}
+                      className={`px-3 py-2 rounded-lg border text-sm ${
+                        mesaNumero === mesa
+                          ? 'bg-primary-100 text-primary-700 border-primary-200'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Mesa {mesa}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  value={mesaNumero}
+                  onChange={(event) => setMesaNumero(Number(event.target.value || 1))}
+                  className="w-full md:w-44 px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Cliente</label>
+                  <input
+                    value={clienteNombre}
+                    onChange={(event) => setClienteNombre(event.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="Nombre del cliente"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Teléfono</label>
+                  <input
+                    value={clienteTelefono}
+                    onChange={(event) => setClienteTelefono(event.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="3001234567"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700">Dirección</label>
+                  <textarea
+                    value={direccionEntrega}
+                    onChange={(event) => setDireccionEntrega(event.target.value)}
+                    rows={3}
+                    className="mt-1 w-full border border-gray-300 rounded-lg p-2 text-sm"
+                    placeholder="Barrio, referencia, apartamento, etc."
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <p className="text-sm font-medium text-gray-700 mb-3">Productos</p>
@@ -240,7 +321,7 @@ export const NuevoPedidoPage: React.FC = () => {
           <aside className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 space-y-4 h-fit">
             <div className="flex items-center gap-2">
               <ShoppingCart size={18} />
-              <h2 className="font-semibold text-gray-900">Resumen de orden</h2>
+              <h2 className="font-semibold text-gray-900">Resumen del pedido</h2>
             </div>
 
             {cart.length === 0 ? (
@@ -287,7 +368,7 @@ export const NuevoPedidoPage: React.FC = () => {
                 value={notas}
                 onChange={(event) => setNotas(event.target.value)}
                 rows={3}
-                placeholder="Sin cebolla, término medio, etc."
+                placeholder="Sin cebolla, término medio, referencia de entrega, etc."
                 className="mt-1 w-full border border-gray-300 rounded-lg p-2 text-sm"
               />
             </div>
@@ -318,7 +399,7 @@ export const NuevoPedidoPage: React.FC = () => {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate('/mesero/pedidos')}
+                  onClick={() => navigate(tipoPedido === OrderType.DOMICILIO ? '/mesero/domicilios' : '/mesero/pedidos')}
                   className="rounded-lg px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar

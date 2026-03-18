@@ -6,8 +6,6 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "restautech_db"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_EXPIRE_MINUTES: int = 480

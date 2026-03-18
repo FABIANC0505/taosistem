@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Clock3, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Clock3, ChefHat, BellRing } from 'lucide-react';
 import { CocinaLayout } from '../../components/CocinaLayout';
 import { ordersService } from '../../services/orders';
-import { metricsService } from '../../services/metricsService';
-import { DispatchedHistory, Order, OrderStatus } from '../../types';
+import { Order, OrderStatus, OrderType } from '../../types';
 
 const statusLabel: Record<OrderStatus, string> = {
   [OrderStatus.PENDIENTE]: 'Pendiente',
@@ -26,7 +25,6 @@ export const PedidosCocinaPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [history, setHistory] = useState<DispatchedHistory | null>(null);
 
   const activeOrders = useMemo(
     () => orders.filter((order) => order.status !== OrderStatus.CANCELADO && order.status !== OrderStatus.ENTREGADO),
@@ -37,24 +35,11 @@ export const PedidosCocinaPage: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-
-      const [ordersResult, historyResult] = await Promise.allSettled([
-        ordersService.getAll(),
-        metricsService.getDispatchedHistory(),
-      ]);
-
-      if (ordersResult.status === 'fulfilled') {
-        setOrders(ordersResult.value);
-      } else {
-        console.error(ordersResult.reason);
-        setError('No se pudieron cargar los pedidos de cocina');
-      }
-
-      if (historyResult.status === 'fulfilled') {
-        setHistory(historyResult.value);
-      } else {
-        console.error(historyResult.reason);
-      }
+      const response = await ordersService.getAll();
+      setOrders(response);
+    } catch (err) {
+      console.error(err);
+      setError('No se pudieron cargar los pedidos de cocina');
     } finally {
       setLoading(false);
     }
@@ -66,14 +51,14 @@ export const PedidosCocinaPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const markAsDelivered = async (orderId: string) => {
+  const updateStatus = async (orderId: string, nextStatus: OrderStatus) => {
     try {
       setActionLoading(orderId);
-      await ordersService.updateStatus(orderId, OrderStatus.ENTREGADO);
+      await ordersService.updateStatus(orderId, nextStatus);
       await loadOrders();
     } catch (err) {
       console.error(err);
-      setError('No se pudo marcar el pedido como entregado');
+      setError('No se pudo actualizar el estado del pedido');
     } finally {
       setActionLoading(null);
     }
@@ -85,7 +70,7 @@ export const PedidosCocinaPage: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Órdenes de cocina</h1>
-            <p className="text-sm text-gray-600 mt-1">Visualiza pedidos activos y marca como entregado al salir</p>
+            <p className="text-sm text-gray-600 mt-1">Recibe pedidos nuevos, inicia preparación y marca cuando estén listos</p>
           </div>
 
           <button
@@ -98,43 +83,6 @@ export const PedidosCocinaPage: React.FC = () => {
         </div>
 
         {error && <div className="p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">{error}</div>}
-
-        {history && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Despachados día a día</h2>
-              <div className="space-y-2 max-h-56 overflow-auto pr-1">
-                {history.dispatched_por_dia.length === 0 ? (
-                  <p className="text-sm text-gray-500">Sin registros disponibles</p>
-                ) : (
-                  history.dispatched_por_dia.slice(-14).reverse().map((item) => (
-                    <div key={item.fecha} className="flex items-center justify-between text-sm border-b border-gray-100 pb-1">
-                      <span className="text-gray-700">{item.fecha}</span>
-                      <span className="font-semibold text-gray-900">{item.cantidad}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Despachados mes a mes</h2>
-              <div className="space-y-2 max-h-56 overflow-auto pr-1">
-                {history.dispatched_por_mes.length === 0 ? (
-                  <p className="text-sm text-gray-500">Sin registros disponibles</p>
-                ) : (
-                  history.dispatched_por_mes.slice(-12).reverse().map((item) => (
-                    <div key={item.mes} className="flex items-center justify-between text-sm border-b border-gray-100 pb-1">
-                      <span className="text-gray-700">{item.mes}</span>
-                      <span className="font-semibold text-gray-900">{item.cantidad}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-3">Retención configurada: {history.retention_days} días</p>
-            </div>
-          </div>
-        )}
 
         {loading ? (
           <div className="h-40 flex items-center justify-center">
@@ -151,7 +99,12 @@ export const PedidosCocinaPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-xs text-gray-500">Pedido #{order.id.slice(0, 8)}</p>
-                    <h2 className="text-xl font-bold text-gray-900">Mesa {order.mesa_numero}</h2>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      {order.tipo_pedido === OrderType.DOMICILIO ? 'Domicilio' : `Mesa ${order.mesa_numero}`}
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {order.tipo_pedido === OrderType.DOMICILIO ? order.direccion_entrega : 'Consumo en mesa'}
+                    </p>
                   </div>
                   <span className={`px-3 py-1 text-xs rounded-full border font-medium ${statusBadge[order.status]}`}>
                     {statusLabel[order.status]}
@@ -174,14 +127,24 @@ export const PedidosCocinaPage: React.FC = () => {
                   ))}
                 </ul>
 
-                <button
-                  onClick={() => markAsDelivered(order.id)}
-                  disabled={actionLoading === order.id}
-                  className="w-full inline-flex justify-center items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white disabled:opacity-60"
-                >
-                  <CheckCircle2 size={16} />
-                  Marcar como entregado
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => updateStatus(order.id, OrderStatus.EN_PREPARACION)}
+                    disabled={actionLoading === order.id || order.status !== OrderStatus.PENDIENTE}
+                    className="inline-flex justify-center items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
+                  >
+                    <ChefHat size={16} />
+                    Tomar pedido
+                  </button>
+                  <button
+                    onClick={() => updateStatus(order.id, OrderStatus.LISTO)}
+                    disabled={actionLoading === order.id || order.status !== OrderStatus.EN_PREPARACION}
+                    className="inline-flex justify-center items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white disabled:opacity-60"
+                  >
+                    <BellRing size={16} />
+                    Marcar listo
+                  </button>
+                </div>
               </article>
             ))}
           </div>

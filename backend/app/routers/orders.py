@@ -9,13 +9,16 @@ from app.models.user import User, UserRole
 from app.services.history_settings import (
     cleanup_expired_dispatched_orders,
     get_history_retention_days,
+    get_orders_history,
 )
 from app.schemas.orden import (
     ActualizarEstadoSchema,
     ActualizarPedidoSchema,
     CancelarPedidoSchema,
     CrearPedidoSchema,
+    OrderHistoryResponseSchema,
     PedidoResponseSchema,
+    TipoPedido,
 )
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -64,6 +67,10 @@ def order_to_response(order: Order) -> PedidoResponseSchema:
         id=order.id,
         id_mesero=order.id_mesero,
         mesa_numero=order.mesa_numero,
+        tipo_pedido=order.tipo_pedido,
+        cliente_nombre=order.cliente_nombre,
+        cliente_telefono=order.cliente_telefono,
+        direccion_entrega=order.direccion_entrega,
         status=order.status,
         items=order.items,
         notas=order.notas,
@@ -107,6 +114,25 @@ def validate_order_owner_management_access(current_user: User, order: Order):
     )
 
 
+def validate_status_transition(current_status: OrderStatus, next_status: OrderStatus):
+    allowed_transitions = {
+        OrderStatus.PENDIENTE: {OrderStatus.EN_PREPARACION, OrderStatus.CANCELADO},
+        OrderStatus.EN_PREPARACION: {OrderStatus.LISTO, OrderStatus.CANCELADO},
+        OrderStatus.LISTO: {OrderStatus.ENTREGADO, OrderStatus.CANCELADO},
+        OrderStatus.ENTREGADO: set(),
+        OrderStatus.CANCELADO: set(),
+    }
+
+    if next_status == current_status:
+        return
+
+    if next_status not in allowed_transitions[current_status]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transición de estado no permitida",
+        )
+
+
 def calculate_total(items: list[dict]) -> float:
     total = sum(float(item["cantidad"]) * float(item["precio_unitario"]) for item in items)
     return round(total, 2)
@@ -128,6 +154,19 @@ async def get_orders(
     result = await db.execute(stmt)
     orders = result.scalars().all()
     return [order_to_response(order) for order in orders]
+
+
+@router.get("/history", response_model=OrderHistoryResponseSchema)
+async def get_order_history(
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.rol not in (UserRole.ADMIN, UserRole.COCINA, UserRole.MESERO):
+        raise HTTPException(status_code=403, detail="No autorizado para ver historial")
+
+    mesero_id = current_user.id if current_user.rol == UserRole.MESERO else None
+    return await get_orders_history(db, max(1, min(limit, 500)), mesero_id=mesero_id)
 
 
 @router.get("/{order_id}", response_model=PedidoResponseSchema)
@@ -161,6 +200,10 @@ async def create_order(
     order = Order(
         id_mesero=current_user.id,
         mesa_numero=payload.mesa_numero,
+        tipo_pedido=payload.tipo_pedido,
+        cliente_nombre=payload.cliente_nombre.strip() if payload.cliente_nombre else None,
+        cliente_telefono=payload.cliente_telefono.strip() if payload.cliente_telefono else None,
+        direccion_entrega=payload.direccion_entrega.strip() if payload.direccion_entrega else None,
         status=OrderStatus.PENDIENTE,
         items=items,
         notas=payload.notas,
@@ -188,11 +231,23 @@ async def update_order(
 
     validate_order_owner_management_access(current_user, order)
 
-    if order.status in (OrderStatus.ENTREGADO, OrderStatus.CANCELADO):
-        raise HTTPException(status_code=400, detail="No se puede editar un pedido finalizado")
+    if order.status != OrderStatus.PENDIENTE:
+        raise HTTPException(status_code=400, detail="Solo se puede editar un pedido pendiente")
 
     if payload.mesa_numero is not None:
         order.mesa_numero = payload.mesa_numero
+
+    if payload.tipo_pedido is not None:
+        order.tipo_pedido = payload.tipo_pedido
+
+    if payload.cliente_nombre is not None:
+        order.cliente_nombre = payload.cliente_nombre.strip() or None
+
+    if payload.cliente_telefono is not None:
+        order.cliente_telefono = payload.cliente_telefono.strip() or None
+
+    if payload.direccion_entrega is not None:
+        order.direccion_entrega = payload.direccion_entrega.strip() or None
 
     if payload.notas is not None:
         order.notas = payload.notas
@@ -201,6 +256,17 @@ async def update_order(
         items = [item.model_dump() for item in payload.items]
         order.items = items
         order.total_amount = calculate_total(items)
+
+    if order.tipo_pedido == TipoPedido.MESA:
+        if order.mesa_numero is None:
+            raise HTTPException(status_code=400, detail="Los pedidos de mesa requieren número de mesa")
+        order.cliente_nombre = None
+        order.cliente_telefono = None
+        order.direccion_entrega = None
+    else:
+        order.mesa_numero = None
+        if not order.cliente_nombre or not order.cliente_telefono or not order.direccion_entrega:
+            raise HTTPException(status_code=400, detail="Los domicilios requieren datos completos")
 
     await db.commit()
     await db.refresh(order)
@@ -222,11 +288,19 @@ async def update_order_status(
 
     validate_order_access(current_user, order)
 
-    if current_user.rol == UserRole.COCINA and payload.status != OrderStatus.ENTREGADO:
+    if current_user.rol == UserRole.COCINA and payload.status not in (OrderStatus.EN_PREPARACION, OrderStatus.LISTO):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cocina solo puede marcar pedidos como entregados",
+            detail="Cocina solo puede marcar pedidos en preparación o listos",
         )
+
+    if current_user.rol == UserRole.MESERO and payload.status != OrderStatus.ENTREGADO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mesero solo puede confirmar la entrega final",
+        )
+
+    validate_status_transition(order.status, payload.status)
 
     now = datetime.now(timezone.utc)
     order.status = payload.status
@@ -261,6 +335,8 @@ async def cancel_order(
     if order.status == OrderStatus.CANCELADO:
         return order_to_response(order)
 
+    validate_status_transition(order.status, OrderStatus.CANCELADO)
+
     order.status = OrderStatus.CANCELADO
     order.cancelado_at = datetime.now(timezone.utc)
     order.cancelado_por = current_user.id
@@ -284,6 +360,9 @@ async def delete_order(
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
 
     validate_order_owner_management_access(current_user, order)
+
+    if order.status != OrderStatus.PENDIENTE:
+        raise HTTPException(status_code=400, detail="Solo se puede eliminar un pedido pendiente")
 
     await db.delete(order)
     await db.commit()

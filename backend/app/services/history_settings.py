@@ -95,3 +95,88 @@ async def get_dispatched_history(db: AsyncSession) -> dict:
         "dispatched_por_dia": dispatched_por_dia,
         "dispatched_por_mes": dispatched_por_mes,
     }
+
+
+async def get_orders_history(db: AsyncSession, limit: int = 100, mesero_id: str | None = None) -> dict:
+    retention_days = await get_history_retention_days(db)
+    await cleanup_expired_dispatched_orders(db, retention_days)
+
+    stmt = (
+        select(Order)
+        .where(Order.status.in_([OrderStatus.ENTREGADO, OrderStatus.CANCELADO]))
+        .order_by(func.coalesce(Order.entregado_at, Order.cancelado_at, Order.created_at).desc())
+        .limit(limit)
+    )
+    if mesero_id:
+        stmt = stmt.where(Order.id_mesero == mesero_id)
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
+
+    now = datetime.now(timezone.utc)
+    start_of_week = now - timedelta(days=now.weekday())
+    deliveries_this_week = 0
+    prep_durations: list[int] = []
+    total_durations: list[int] = []
+    history_items = []
+
+    for order in orders:
+        total_items = sum(int(item.get("cantidad", 0)) for item in (order.items or []))
+        tiempo_hasta_preparacion = None
+        tiempo_preparacion = None
+        tiempo_total = None
+
+        if order.cocinando_at and order.created_at:
+            tiempo_hasta_preparacion = int((order.cocinando_at - order.created_at).total_seconds())
+
+        if order.cocinando_at and order.served_at:
+            tiempo_preparacion = int((order.served_at - order.cocinando_at).total_seconds())
+            prep_durations.append(tiempo_preparacion)
+
+        if order.created_at and order.entregado_at:
+            tiempo_total = int((order.entregado_at - order.created_at).total_seconds())
+            total_durations.append(tiempo_total)
+
+        if (
+            order.tipo_pedido == "domicilio"
+            and order.created_at
+            and order.created_at >= start_of_week
+            and order.status == OrderStatus.ENTREGADO
+        ):
+            deliveries_this_week += 1
+
+        history_items.append(
+            {
+                "id": order.id,
+                "tipo_pedido": order.tipo_pedido,
+                "mesa_numero": order.mesa_numero,
+                "cliente_nombre": order.cliente_nombre,
+                "cliente_telefono": order.cliente_telefono,
+                "direccion_entrega": order.direccion_entrega,
+                "status": order.status,
+                "total_amount": float(order.total_amount),
+                "created_at": order.created_at,
+                "cocinando_at": order.cocinando_at,
+                "served_at": order.served_at,
+                "entregado_at": order.entregado_at,
+                "cancelado_at": order.cancelado_at,
+                "notas": order.notas,
+                "total_items": total_items,
+                "tiempo_hasta_preparacion_segundos": tiempo_hasta_preparacion,
+                "tiempo_preparacion_segundos": tiempo_preparacion,
+                "tiempo_total_segundos": tiempo_total,
+            }
+        )
+
+    return {
+        "summary": {
+            "total_registros": len(history_items),
+            "total_domicilios_semana": deliveries_this_week,
+            "tiempo_promedio_preparacion_segundos": round(sum(prep_durations) / len(prep_durations), 2)
+            if prep_durations
+            else 0,
+            "tiempo_promedio_total_segundos": round(sum(total_durations) / len(total_durations), 2)
+            if total_durations
+            else 0,
+        },
+        "items": history_items,
+    }

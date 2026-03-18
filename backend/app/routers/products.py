@@ -18,16 +18,6 @@ class ProductBase(BaseModel):
     categoria: str
     disponible: bool = True
 
-class ProductCreate(ProductBase):
-    pass
-
-class ProductUpdate(BaseModel):
-    nombre: Optional[str] = None
-    precio: Optional[float] = None
-    descripcion: Optional[str] = None
-    categoria: Optional[str] = None
-    disponible: Optional[bool] = None
-
 class ProductResponse(ProductBase):
     id: str
     imagen_url: Optional[str] = None

@@ -5,11 +5,6 @@ uvicorn[standard]==0.29.0
 # Database
 sqlalchemy==2.0.44
 asyncpg==0.31.0
-alembic==1.13.1
-psycopg2-binary==2.9.9
-
-# Redis
-redis[asyncio]==5.0.3
 
 # Auth
 python-jose[cryptography]==3.3.0
@@ -19,9 +14,5 @@ passlib[bcrypt]==1.7.4
 pydantic==2.6.4
 pydantic-settings==2.2.1
 
-# Images
-Pillow==10.2.0
-
 # Utils
 python-multipart==0.0.9
-qrcode[pil]==7.4.2
