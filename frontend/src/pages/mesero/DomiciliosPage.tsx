@@ -56,9 +56,18 @@ export const DomiciliosPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
+    const refresh = () => {
+      void loadData();
+    };
+
+    refresh();
+    const interval = setInterval(refresh, 3000);
+    window.addEventListener('focus', refresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
   }, []);
 
   return (

@@ -17,16 +17,26 @@ export const UsuariosPage: React.FC = () => {
   });
 
   useEffect(() => {
-    loadUsers();
+    const refresh = () => {
+      void loadUsers();
+    };
+
+    refresh();
+    window.addEventListener('focus', refresh);
+
+    return () => {
+      window.removeEventListener('focus', refresh);
+    };
   }, []);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
+      setError('');
       const data = await userService.getAll();
       setUsers(data);
-    } catch (err) {
-      setError('Error al cargar usuarios');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Error al cargar usuarios');
       console.error(err);
     } finally {
       setLoading(false);
@@ -60,8 +70,8 @@ export const UsuariosPage: React.FC = () => {
     try {
       await userService.updateRole(id, newRole);
       await loadUsers();
-    } catch (err) {
-      setError('Error al actualizar rol');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Error al actualizar rol');
     }
   };
 
@@ -73,8 +83,8 @@ export const UsuariosPage: React.FC = () => {
         await userService.update(user.id, { activo: true });
       }
       await loadUsers();
-    } catch (err) {
-      setError('Error al actualizar estado del usuario');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Error al actualizar estado del usuario');
     }
   };
 
@@ -193,45 +203,53 @@ export const UsuariosPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm">{user.nombre}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <select
-                          value={user.rol}
-                          onChange={(e) => handleUpdateRole(user.id, e.target.value as UserRole)}
-                          className={`px-3 py-1 rounded-lg text-sm font-medium border-0 cursor-pointer ${getRoleColor(user.rol)}`}
-                        >
-                          <option value={UserRole.MESERO}>Mesero</option>
-                          <option value={UserRole.COCINA}>Cocina</option>
-                          <option value={UserRole.ADMIN}>Admin</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className={`px-3 py-1 rounded-lg text-sm font-medium ${user.activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                          {user.activo ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleToggleActivo(user)}
-                            className={`p-2 rounded-lg transition ${user.activo ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-green-50 text-green-600'}`}
-                            title={user.activo ? 'Desactivar usuario' : 'Activar usuario'}
-                          >
-                            {user.activo ? <Lock size={16} /> : <Shield size={16} />}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">
+                        No hay usuarios para mostrar.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    users.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 text-sm">{user.nombre}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <select
+                            value={user.rol}
+                            onChange={(e) => handleUpdateRole(user.id, e.target.value as UserRole)}
+                            className={`px-3 py-1 rounded-lg text-sm font-medium border-0 cursor-pointer ${getRoleColor(user.rol)}`}
+                          >
+                            <option value={UserRole.MESERO}>Mesero</option>
+                            <option value={UserRole.COCINA}>Cocina</option>
+                            <option value={UserRole.ADMIN}>Admin</option>
+                          </select>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-lg text-sm font-medium ${user.activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                            {user.activo ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleToggleActivo(user)}
+                              className={`p-2 rounded-lg transition ${user.activo ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-green-50 text-green-600'}`}
+                              title={user.activo ? 'Desactivar usuario' : 'Activar usuario'}
+                            >
+                              {user.activo ? <Lock size={16} /> : <Shield size={16} />}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(user.id)}
+                              className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

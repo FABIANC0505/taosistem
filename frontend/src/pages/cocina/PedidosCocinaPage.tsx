@@ -46,9 +46,18 @@ export const PedidosCocinaPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadOrders();
-    const interval = setInterval(loadOrders, 10000);
-    return () => clearInterval(interval);
+    const refresh = () => {
+      void loadOrders();
+    };
+
+    refresh();
+    const interval = setInterval(refresh, 3000);
+    window.addEventListener('focus', refresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
   }, []);
 
   const updateStatus = async (orderId: string, nextStatus: OrderStatus) => {

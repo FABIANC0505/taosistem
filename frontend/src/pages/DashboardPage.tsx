@@ -18,9 +18,18 @@ export const DashboardPage: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadMetrics();
-    const interval = setInterval(loadMetrics, 10000);
-    return () => clearInterval(interval);
+    const refresh = () => {
+      void loadMetrics();
+    };
+
+    refresh();
+    const interval = setInterval(refresh, 5000);
+    window.addEventListener('focus', refresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
   }, []);
 
   const loadMetrics = async () => {

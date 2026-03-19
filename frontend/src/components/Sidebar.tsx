@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full w-64 glass border-r border-white/50 z-40 transform transition-transform duration-500 ease-in-out lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ marginTop: '60px' }}
@@ -64,10 +64,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
                 key={item.href}
                 to={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-95 ${
                   isActive(item.href)
-                    ? 'bg-primary-100 text-primary-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-gradient-to-r from-primary-500/10 to-transparent text-primary-700 font-semibold border-l-4 border-primary-500 shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100/60 hover:text-gray-900 border-l-4 border-transparent'
                 }`}
               >
                 {item.icon}

@@ -1,5 +1,6 @@
 import api from '../utils/api';
 import type { User, LoginRequest, AuthResponse } from '../types';
+import { authStorage } from '../utils/authStorage';
 
 export const authService = {
   login: async (credentials: LoginRequest): Promise<AuthResponse> => {
@@ -8,13 +9,12 @@ export const authService = {
   },
 
   logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
+    authStorage.clear();
   },
 
   getCurrentUser: (): User | null => {
     try {
-      const user = localStorage.getItem('user');
+      const user = authStorage.getUser();
       return user ? JSON.parse(user) : null;
     } catch {
       return null;
@@ -22,11 +22,10 @@ export const authService = {
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('access_token') && !!authService.getCurrentUser();
+    return !!authStorage.getToken() && !!authService.getCurrentUser();
   },
 
   saveAuth: (token: string, user: User) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    authStorage.setAuth(token, JSON.stringify(user));
   },
 };

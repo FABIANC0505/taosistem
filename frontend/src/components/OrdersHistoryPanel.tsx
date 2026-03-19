@@ -55,7 +55,18 @@ export const OrdersHistoryPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    loadHistory();
+    const refresh = () => {
+      void loadHistory();
+    };
+
+    refresh();
+    const interval = setInterval(refresh, 5000);
+    window.addEventListener('focus', refresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
   }, []);
 
   return (

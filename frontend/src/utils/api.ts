@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { authStorage } from './authStorage';
 
 const envApiUrl = String(import.meta.env.VITE_API_URL || '').trim();
 const hasInvalidPlaceholder =
@@ -18,7 +19,7 @@ export const api: AxiosInstance = axios.create({
 // Interceptor para agregar token a cada solicitud
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = authStorage.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -32,8 +33,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
+      authStorage.clear();
       // Solo redirigir si no estamos ya en /login
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
