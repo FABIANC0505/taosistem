@@ -31,9 +31,12 @@ dist/
 *.local
 
 # Env files (sensibles)
+.env
+.env.local
 backend/.env
 backend/.env.production
 frontend/.env
+frontend/.env.production
 
 # IDE
 .vscode/
