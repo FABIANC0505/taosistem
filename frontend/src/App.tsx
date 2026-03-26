@@ -13,6 +13,7 @@ import { DomiciliosPage } from './pages/mesero/DomiciliosPage';
 import { NuevoPedidoPage } from './pages/mesero/NuevoPedidoPage';
 import { HistorialCocinaPage } from './pages/cocina/HistorialCocinaPage';
 import { PedidosCocinaPage } from './pages/cocina/PedidosCocinaPage';
+import { CajaPage } from './pages/cajero/CajaPage';
 import { authService } from './services/authService';
 import './index.css';
 
@@ -30,6 +31,10 @@ const HomeRedirect: React.FC = () => {
 
   if (role === 'cocina') {
     return <Navigate to="/cocina/pedidos" replace />;
+  }
+
+  if (role === 'cajero') {
+    return <Navigate to="/cajero" replace />;
   }
 
   return <Navigate to="/admin" replace />;
@@ -105,6 +110,15 @@ function App() {
           element={
             <ProtectedRoute requiredRole="cocina">
               <HistorialCocinaPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/cajero"
+          element={
+            <ProtectedRoute requiredRole="cajero">
+              <CajaPage />
             </ProtectedRoute>
           }
         />

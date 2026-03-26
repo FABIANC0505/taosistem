@@ -23,22 +23,28 @@ export const Navbar: React.FC<NavbarProps> = ({ sidebarOpen, setSidebarOpen }) =
         <div className="flex items-center gap-4">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition"
+            className="icon-button lg:hidden"
           >
             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
-          <h1 className="text-2xl font-extrabold gradient-text tracking-tight">RestauTech</h1>
+          <div>
+            <h1 className="text-2xl font-extrabold gradient-text tracking-tight">RestauTech</h1>
+            <p className="hidden text-xs uppercase tracking-[0.2em] text-slate-500 sm:block">Control operativo</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-700">
+          <div className="hidden rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300 sm:block">
+            {user?.rol}
+          </div>
+          <div className="text-sm text-slate-200">
             <p className="font-medium">{user?.nombre}</p>
-            <p className="text-xs text-gray-500 capitalize">{user?.rol}</p>
+            <p className="text-xs text-slate-400 capitalize">{user?.rol}</p>
           </div>
 
           <button
             onClick={handleLogout}
-            className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition"
+            className="danger-icon-button"
           >
             <LogOut size={20} />
           </button>

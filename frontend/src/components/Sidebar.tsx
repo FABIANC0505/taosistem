@@ -39,13 +39,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
     <>
       {open && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-30"
+          className="fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-full w-64 glass border-r border-white/50 z-40 transform transition-transform duration-500 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-40 h-full w-64 border-r border-slate-800/80 bg-slate-950/92 backdrop-blur-xl transform transition-transform duration-500 ease-in-out lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ marginTop: '60px' }}
@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
         <div className="p-6 flex flex-col gap-6">
           <button
             onClick={onClose}
-            className="lg:hidden absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg"
+            className="icon-button lg:hidden absolute top-4 right-4"
           >
             <X size={20} />
           </button>
@@ -64,16 +64,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
                 key={item.href}
                 to={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-95 ${
+                className={`nav-link px-4 py-3 transition-all duration-300 hover:scale-[1.02] active:scale-95 ${
                   isActive(item.href)
-                    ? 'bg-gradient-to-r from-primary-500/10 to-transparent text-primary-700 font-semibold border-l-4 border-primary-500 shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-100/60 hover:text-gray-900 border-l-4 border-transparent'
+                    ? 'nav-link-active border-l-4 border-l-emerald-400 font-semibold'
+                    : 'border-l-4 border-l-transparent'
                 }`}
               >
                 {item.icon}
                 <span>{item.label}</span>
                 {item.badge && (
-                  <span className="ml-auto bg-primary-600 text-white text-xs px-2 py-1 rounded-full">
+                  <span className="ml-auto rounded-full bg-emerald-500/15 px-2 py-1 text-xs text-emerald-300">
                     {item.badge}
                   </span>
                 )}

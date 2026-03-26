@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -302,7 +302,7 @@ async def update_order_status(
 
     validate_status_transition(order.status, payload.status)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     order.status = payload.status
 
     if payload.status == OrderStatus.EN_PREPARACION and not order.cocinando_at:
@@ -338,7 +338,7 @@ async def cancel_order(
     validate_status_transition(order.status, OrderStatus.CANCELADO)
 
     order.status = OrderStatus.CANCELADO
-    order.cancelado_at = datetime.now(timezone.utc)
+    order.cancelado_at = datetime.utcnow()
     order.cancelado_por = current_user.id
     order.motivo_cancelacion = payload.motivo_cancelacion
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
 import { authService } from '../services/authService';
 
 export const LoginPage: React.FC = () => {
@@ -23,21 +23,21 @@ export const LoginPage: React.FC = () => {
         password,
       });
 
-      // Guardar token y usuario
       authService.saveAuth(response.access_token, response.user);
 
       const role = String(response.user?.rol || '').toLowerCase();
 
-      // Redirigir al dashboard
       if (role === 'mesero') {
         navigate('/mesero/pedidos');
       } else if (role === 'cocina') {
         navigate('/cocina/pedidos');
+      } else if (role === 'cajero') {
+        navigate('/cajero');
       } else {
         navigate('/admin');
       }
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || err.message || 'Error al iniciar sesión';
+      const errorMsg = err.response?.data?.detail || err.message || 'Error al iniciar sesion';
       setError(errorMsg);
       console.error('Login error:', err);
     } finally {
@@ -46,76 +46,94 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Tarjeta de Login */}
-        <div className="bg-white rounded-lg shadow-2xl p-8">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-blue-600">RestauTech</h1>
-            <p className="text-gray-600 mt-2">Panel de Administración</p>
+    <div className="gradient-bg flex min-h-screen items-center justify-center p-4">
+      <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="panel-surface relative hidden overflow-hidden p-8 lg:flex lg:flex-col lg:justify-between">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.18),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(56,189,248,0.16),_transparent_30%)]" />
+
+          <div className="relative z-10">
+            <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">RestauTech</p>
+            <h1 className="mt-4 max-w-md text-5xl font-extrabold leading-tight text-slate-50">
+              Operacion clara, servicio rapido y control total.
+            </h1>
+            <p className="mt-4 max-w-lg text-base text-slate-300">
+              Accede al panel segun tu rol y monitorea pedidos, cocina, caja e historial desde una interfaz mas limpia y enfocada.
+            </p>
           </div>
 
-          {/* Formulario */}
+          <div className="relative z-10 grid grid-cols-3 gap-3">
+            {[
+              ['Mesero', 'Pedidos y domicilios'],
+              ['Cocina', 'Tiempos y entregas'],
+              ['Caja', 'Arqueo y mesas'],
+            ].map(([title, text]) => (
+              <div key={title} className="panel-muted p-4">
+                <p className="text-sm font-bold text-slate-100">{title}</p>
+                <p className="mt-1 text-sm text-slate-400">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="panel-surface w-full max-w-md justify-self-center p-8 sm:p-10">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300">
+              Acceso seguro
+            </div>
+            <h1 className="gradient-text text-3xl font-bold">RestauTech</h1>
+            <p className="mt-2 text-slate-400">Ingresa con tu correo y contrasena</p>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Correo Electrónico
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Correo electronico
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
+                <Mail className="absolute left-3 top-3 text-slate-500" size={20} />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="field-input pl-10 disabled:cursor-not-allowed disabled:opacity-60"
                   placeholder="admin@restaurante.com"
                 />
               </div>
             </div>
 
-            {/* Contraseña */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Contraseña
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Contrasena
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
+                <Lock className="absolute left-3 top-3 text-slate-500" size={20} />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  placeholder="Tu contraseña"
+                  className="field-input pl-10 disabled:cursor-not-allowed disabled:opacity-60"
+                  placeholder="Tu contrasena"
                 />
               </div>
             </div>
 
-            {/* Mensaje de error */}
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
                 {error}
               </div>
             )}
 
-            {/* Botón de envío */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 rounded-lg transition"
-            >
-              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            <button type="submit" disabled={loading} className="primary-button w-full">
+              {loading ? 'Iniciando sesion...' : 'Iniciar sesion'}
             </button>
           </form>
 
-          {/* Ayuda */}
-          <p className="text-center text-gray-500 text-sm mt-6">
-            Contacta al administrador si olvidaste tu contraseña
+          <p className="mt-6 text-center text-sm text-slate-500">
+            Contacta al administrador si olvidaste tu contrasena
           </p>
         </div>
       </div>

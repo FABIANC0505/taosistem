@@ -31,6 +31,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
     if (currentRole === 'cocina') {
       return <Navigate to="/cocina/pedidos" replace />;
     }
+    if (currentRole === 'cajero') {
+      return <Navigate to="/cajero" replace />;
+    }
     return <Navigate to="/admin" replace />;
   }
 

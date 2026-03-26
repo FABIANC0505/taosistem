@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import delete, func, select, text
+from collections import defaultdict
+from datetime import datetime, timedelta
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.app_setting import AppSetting
 from app.models.orden import Order, OrderStatus
@@ -39,7 +40,7 @@ async def set_history_retention_days(db: AsyncSession, retention_days: int) -> i
 
 
 async def cleanup_expired_dispatched_orders(db: AsyncSession, retention_days: int) -> int:
-    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    cutoff = datetime.utcnow() - timedelta(days=retention_days)
     delivered_at_expr = func.coalesce(Order.entregado_at, Order.created_at)
 
     stmt = delete(Order).where(
@@ -56,44 +57,30 @@ async def get_dispatched_history(db: AsyncSession) -> dict:
     retention_days = await get_history_retention_days(db)
     await cleanup_expired_dispatched_orders(db, retention_days)
 
-    delivered_at_expr = func.coalesce(Order.entregado_at, Order.created_at)
+    stmt = select(Order).where(Order.status == OrderStatus.ENTREGADO)
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
 
-    daily_stmt = (
-        select(
-            func.date(delivered_at_expr).label("fecha"),
-            func.count(Order.id).label("cantidad"),
-        )
-        .where(Order.status == OrderStatus.ENTREGADO)
-        .group_by(func.date(delivered_at_expr))
-        .order_by(func.date(delivered_at_expr))
-    )
+    per_day: dict[str, int] = defaultdict(int)
+    per_month: dict[str, int] = defaultdict(int)
 
-    monthly_stmt = text("""
-        SELECT
-            to_char(coalesce(entregado_at, created_at), 'YYYY-MM') AS mes,
-            count(id) AS cantidad
-        FROM orders
-        WHERE status::text = 'ENTREGADO'
-        GROUP BY 1
-        ORDER BY 1
-    """)
-
-    daily_result = await db.execute(daily_stmt)
-    monthly_result = await db.execute(monthly_stmt)
-
-    dispatched_por_dia = [
-        {"fecha": row.fecha.isoformat(), "cantidad": int(row.cantidad)}
-        for row in daily_result.all()
-    ]
-    dispatched_por_mes = [
-        {"mes": row.mes, "cantidad": int(row.cantidad)}
-        for row in monthly_result.all()
-    ]
+    for order in orders:
+        delivered_at = order.entregado_at or order.created_at
+        if not delivered_at:
+            continue
+        per_day[delivered_at.date().isoformat()] += 1
+        per_month[delivered_at.strftime("%Y-%m")] += 1
 
     return {
         "retention_days": retention_days,
-        "dispatched_por_dia": dispatched_por_dia,
-        "dispatched_por_mes": dispatched_por_mes,
+        "dispatched_por_dia": [
+            {"fecha": fecha, "cantidad": cantidad}
+            for fecha, cantidad in sorted(per_day.items())
+        ],
+        "dispatched_por_mes": [
+            {"mes": mes, "cantidad": cantidad}
+            for mes, cantidad in sorted(per_month.items())
+        ],
     }
 
 
@@ -101,18 +88,21 @@ async def get_orders_history(db: AsyncSession, limit: int = 100, mesero_id: str 
     retention_days = await get_history_retention_days(db)
     await cleanup_expired_dispatched_orders(db, retention_days)
 
-    stmt = (
-        select(Order)
-        .where(Order.status.in_([OrderStatus.ENTREGADO, OrderStatus.CANCELADO]))
-        .order_by(func.coalesce(Order.entregado_at, Order.cancelado_at, Order.created_at).desc())
-        .limit(limit)
+    stmt = select(Order).where(
+        Order.status.in_([OrderStatus.ENTREGADO, OrderStatus.CANCELADO])
     )
     if mesero_id:
         stmt = stmt.where(Order.id_mesero == mesero_id)
+
     result = await db.execute(stmt)
     orders = result.scalars().all()
+    orders = sorted(
+        orders,
+        key=lambda order: order.entregado_at or order.cancelado_at or order.created_at or datetime.min,
+        reverse=True,
+    )[:limit]
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     start_of_week = now - timedelta(days=now.weekday())
     deliveries_this_week = 0
     prep_durations: list[int] = []

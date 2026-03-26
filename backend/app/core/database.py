@@ -1,9 +1,12 @@
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+
 from app.core.config import settings
 
-engine = create_async_engine(settings.get_database_url(), echo=True)
+engine = create_async_engine(
+    settings.get_database_url(),
+    echo=settings.APP_ENV == "development",
+)
 AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 class Base(DeclarativeBase):
@@ -17,12 +20,7 @@ async def get_db():
             await session.close()
 
 async def init_db():
-    from app.models import User, Product, Order, AppSetting
+    from app.models import User, Product, Order, AppSetting, CashSession, CashMovement, CashPayment, WaiterAlert
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(text("ALTER TABLE orders ALTER COLUMN mesa_numero DROP NOT NULL"))
-        await conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tipo_pedido VARCHAR(20) NOT NULL DEFAULT 'mesa'"))
-        await conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cliente_nombre VARCHAR(150)"))
-        await conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS cliente_telefono VARCHAR(30)"))
-        await conn.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS direccion_entrega TEXT"))
-        print("Conexion a PostgreSQL exitosa y tablas creadas")
+        print("Conexion a MySQL exitosa y tablas creadas")

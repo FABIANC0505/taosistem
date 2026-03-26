@@ -1,11 +1,17 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    POSTGRES_USER: str = "restautech_user"
-    POSTGRES_PASSWORD: str = "restautech_pass_2026"
-    POSTGRES_DB: str = "restautech_db"
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
+    MYSQL_USER: str = "root"
+    MYSQL_PASSWORD: str = "root"
+    MYSQL_DB: str = "bdtaosistem"
+    MYSQL_HOST: str = "localhost"
+    MYSQL_PORT: int = 3306
+    MYSQL_URL: str | None = None
+    MYSQLHOST: str | None = None
+    MYSQLPORT: int | None = None
+    MYSQLUSER: str | None = None
+    MYSQLPASSWORD: str | None = None
+    MYSQLDATABASE: str | None = None
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_EXPIRE_MINUTES: int = 480
@@ -18,12 +24,29 @@ class Settings(BaseSettings):
     def get_database_url(self) -> str:
         if self.DATABASE_URL:
             db_url = self.DATABASE_URL
-            if db_url.startswith("postgres://"):
-                db_url = db_url.replace("postgres://", "postgresql://", 1)
-            if db_url.startswith("postgresql://"):
-                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            return db_url
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        elif self.MYSQL_URL:
+            db_url = self.MYSQL_URL
+        elif self.MYSQLHOST and self.MYSQLUSER and self.MYSQLDATABASE:
+            mysql_password = self.MYSQLPASSWORD or ""
+            mysql_port = self.MYSQLPORT or 3306
+            db_url = (
+                f"mysql://{self.MYSQLUSER}:{mysql_password}"
+                f"@{self.MYSQLHOST}:{mysql_port}/{self.MYSQLDATABASE}"
+            )
+        else:
+            return (
+                f"mysql+aiomysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
+                f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}"
+            )
+        if db_url.startswith("mysql://"):
+            db_url = db_url.replace("mysql://", "mysql+aiomysql://", 1)
+        if db_url.startswith("mysql+pymysql://"):
+            db_url = db_url.replace("mysql+pymysql://", "mysql+aiomysql://", 1)
+        if db_url.startswith("postgres://"):
+            raise ValueError("La configuracion actual del proyecto espera MySQL 8, no PostgreSQL.")
+        if db_url.startswith("postgresql://"):
+            raise ValueError("La configuracion actual del proyecto espera MySQL 8, no PostgreSQL.")
+        return db_url
 
     @property
     def cors_origins_list(self) -> list[str]:

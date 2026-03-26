@@ -6,19 +6,19 @@
 
 @layer utilities {
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-xl;
+    @apply bg-slate-950/60 backdrop-blur-xl border border-slate-800/80 shadow-2xl shadow-slate-950/40;
   }
   .glass-dark {
-    @apply bg-gray-900/70 backdrop-blur-md border border-gray-700/50 shadow-xl;
+    @apply bg-slate-950/80 backdrop-blur-xl border border-slate-800/80 shadow-2xl shadow-slate-950/50;
   }
   .glass-card {
-    @apply bg-white/80 backdrop-blur-sm border border-slate-200/60 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300;
+    @apply bg-slate-900/70 backdrop-blur-md border border-slate-800/80 shadow-xl shadow-slate-950/30 hover:shadow-2xl hover:shadow-slate-950/40 hover:-translate-y-1 transition-all duration-300;
   }
   .gradient-text {
-    @apply text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-secondary-600;
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-sky-400;
   }
   .gradient-bg {
-    @apply bg-gradient-to-br from-slate-50 via-white to-secondary-50;
+    @apply bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(56,189,248,0.14),_transparent_26%),linear-gradient(180deg,_#08111f_0%,_#0b1525_52%,_#070d18_100%)];
   }
   .animate-delay-100 {
     animation-delay: 100ms;
@@ -32,6 +32,33 @@
   .animate-delay-400 {
     animation-delay: 400ms;
   }
+  .app-shell {
+    @apply min-h-screen text-slate-100;
+  }
+  .panel-surface {
+    @apply rounded-2xl border border-slate-800/80 bg-slate-900/75 backdrop-blur-md shadow-xl shadow-slate-950/25;
+  }
+  .panel-muted {
+    @apply rounded-xl border border-slate-800/70 bg-slate-950/40;
+  }
+  .field-input {
+    @apply w-full rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20;
+  }
+  .nav-link {
+    @apply flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-slate-300 transition hover:border-slate-800 hover:bg-slate-900/80 hover:text-white;
+  }
+  .nav-link-active {
+    @apply border-emerald-500/30 bg-gradient-to-r from-emerald-500/20 via-cyan-500/10 to-transparent text-white shadow-lg shadow-emerald-950/20;
+  }
+  .icon-button {
+    @apply rounded-xl border border-slate-800 bg-slate-900/70 p-2.5 text-slate-200 transition hover:border-slate-700 hover:bg-slate-800 hover:text-white;
+  }
+  .danger-icon-button {
+    @apply rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-red-300 transition hover:bg-red-500/20 hover:text-red-200;
+  }
+  .primary-button {
+    @apply rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2.5 font-semibold text-slate-950 shadow-lg shadow-emerald-950/25 transition hover:from-emerald-400 hover:to-cyan-400 disabled:cursor-not-allowed disabled:opacity-60;
+  }
 }
 
 /* Custom Scrollbar */
@@ -43,9 +70,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #334155;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #475569;
 }

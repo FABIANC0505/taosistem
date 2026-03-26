@@ -96,6 +96,8 @@ export const UsuariosPage: React.FC = () => {
         return 'bg-orange-100 text-orange-800';
       case UserRole.MESERO:
         return 'bg-blue-100 text-blue-800';
+      case UserRole.CAJERO:
+        return 'bg-emerald-100 text-emerald-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -162,6 +164,7 @@ export const UsuariosPage: React.FC = () => {
                 >
                   <option value={UserRole.MESERO}>Mesero</option>
                   <option value={UserRole.COCINA}>Cocina</option>
+                  <option value={UserRole.CAJERO}>Cajero</option>
                   <option value={UserRole.ADMIN}>Admin</option>
                 </select>
               </div>
@@ -222,6 +225,7 @@ export const UsuariosPage: React.FC = () => {
                           >
                             <option value={UserRole.MESERO}>Mesero</option>
                             <option value={UserRole.COCINA}>Cocina</option>
+                            <option value={UserRole.CAJERO}>Cajero</option>
                             <option value={UserRole.ADMIN}>Admin</option>
                           </select>
                         </td>

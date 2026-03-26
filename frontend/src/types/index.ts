@@ -3,6 +3,7 @@ export enum UserRole {
   ADMIN = 'admin',
   MESERO = 'mesero',
   COCINA = 'cocina',
+  CAJERO = 'cajero',
 }
 
 export interface User {
@@ -144,4 +145,93 @@ export interface OrderHistorySummary {
 export interface OrderHistoryResponse {
   summary: OrderHistorySummary;
   items: OrderHistoryEntry[];
+}
+
+export enum CashMovementType {
+  SALIDA = 'salida',
+  SERVICIO_CANCELADO = 'servicio_cancelado',
+  PAGO_PRODUCTO = 'pago_producto',
+  OTRO = 'otro',
+}
+
+export interface CashSession {
+  id: string;
+  cashier_user_id: string;
+  opening_amount: number;
+  opening_note?: string;
+  opened_at?: string;
+  closed_at?: string;
+  is_open: boolean;
+  closing_counted_amount?: number | null;
+  closing_note?: string | null;
+}
+
+export interface CashMovement {
+  id: string;
+  session_id: string;
+  cashier_user_id: string;
+  movement_type: CashMovementType;
+  amount: number;
+  description: string;
+  related_order_id?: string | null;
+  created_at?: string;
+}
+
+export enum PaymentMethod {
+  EFECTIVO = 'efectivo',
+  TRANSFERENCIA = 'transferencia',
+  TARJETA = 'tarjeta',
+  NEQUI = 'nequi',
+  DAVIPLATA = 'daviplata',
+  OTRO = 'otro',
+}
+
+export interface CashPayment {
+  id: string;
+  session_id: string;
+  cashier_user_id: string;
+  order_id?: string | null;
+  mesa_numero?: number | null;
+  payment_method: PaymentMethod;
+  amount: number;
+  reference_note?: string | null;
+  created_at?: string;
+}
+
+export interface PaymentMethodSummary {
+  payment_method: PaymentMethod;
+  total_amount: number;
+  transactions: number;
+}
+
+export interface WaiterAlert {
+  id: string;
+  mesa_numero: number;
+  cashier_user_id: string;
+  mesero_user_id?: string | null;
+  message: string;
+  resolved: boolean;
+  created_at?: string;
+  resolved_at?: string | null;
+}
+
+export interface CashTableSummaryItem {
+  mesa_numero: number;
+  libre: boolean;
+  order_id?: string | null;
+  status?: string | null;
+  total_amount?: number | null;
+  mesero_id?: string | null;
+  mesero_nombre?: string | null;
+  created_at?: string | null;
+}
+
+export interface CashierSummary {
+  total_mesas: number;
+  mesas_ocupadas: CashTableSummaryItem[];
+  mesas_libres: CashTableSummaryItem[];
+  active_alerts: WaiterAlert[];
+  open_session?: CashSession | null;
+  recent_payments: CashPayment[];
+  payment_summary: PaymentMethodSummary[];
 }

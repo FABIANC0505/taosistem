@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.core.database import init_db
 import uvicorn
 import os
-from app.routers import auth, users, products, metrics, orders, settings as settings_router
+from app.routers import auth, users, products, metrics, orders, settings as settings_router, cashier
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,6 +39,7 @@ app.include_router(products.router)
 app.include_router(metrics.router)
 app.include_router(orders.router)
 app.include_router(settings_router.router)
+app.include_router(cashier.router)
 
 @app.get("/health")
 async def health():

@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, RefreshCw, SquarePen, CircleX, CheckCheck, Bike } from 'lucide-react';
 import { MeseroLayout } from '../../components/MeseroLayout';
-import { Order, OrderStatus, OrderType } from '../../types';
+import { Order, OrderStatus, OrderType, WaiterAlert } from '../../types';
 import { ordersService } from '../../services/orders';
+import { cashierService } from '../../services/cashierService';
 
 const statusStyles: Record<OrderStatus, string> = {
   [OrderStatus.PENDIENTE]: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -27,6 +28,7 @@ export const PedidosPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<WaiterAlert[]>([]);
 
   const activeOrders = useMemo(
     () => orders.filter((order) => order.status !== OrderStatus.ENTREGADO && order.status !== OrderStatus.CANCELADO),
@@ -37,13 +39,27 @@ export const PedidosPage: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const data = await ordersService.getAll();
+      const [data, waiterAlerts] = await Promise.all([
+        ordersService.getAll(),
+        cashierService.getMyAlerts().catch(() => []),
+      ]);
       setOrders(data);
+      setAlerts(waiterAlerts);
     } catch (err) {
       console.error(err);
       setError('No se pudieron cargar los pedidos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resolveAlert = async (alertId: string) => {
+    try {
+      await cashierService.resolveAlert(alertId);
+      await loadOrders();
+    } catch (err) {
+      console.error(err);
+      setError('No se pudo cerrar el aviso de caja');
     }
   };
 
@@ -125,6 +141,27 @@ export const PedidosPage: React.FC = () => {
         </div>
 
         {error && <div className="p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">{error}</div>}
+
+        {alerts.length > 0 && (
+          <div className="space-y-3">
+            {alerts.map((alert) => (
+              <div key={alert.id} className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900">Aviso de caja para mesa {alert.mesa_numero}</p>
+                    <p className="text-sm text-amber-800 mt-1">{alert.message}</p>
+                  </div>
+                  <button
+                    onClick={() => void resolveAlert(alert.id)}
+                    className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700"
+                  >
+                    Marcar atendido
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div className="h-40 flex items-center justify-center">

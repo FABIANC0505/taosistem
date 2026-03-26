@@ -11,6 +11,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
     MESERO = "mesero"
     COCINA = "cocina"
+    CAJERO = "cajero"
 
 
 class User(Base):
@@ -22,10 +23,10 @@ class User(Base):
     email:         Mapped[str]      = mapped_column(String(200), unique=True,
                                                     nullable=False, index=True)
     password_hash: Mapped[str]      = mapped_column(String(255), nullable=False)
-    rol:           Mapped[UserRole] = mapped_column(SAEnum(UserRole), nullable=False)
+    rol:           Mapped[UserRole] = mapped_column(SAEnum(UserRole, native_enum=False), nullable=False)
     activo:        Mapped[bool]     = mapped_column(Boolean, default=True)
-    created_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True),
+    created_at:    Mapped[datetime] = mapped_column(DateTime(),
                                                     server_default=func.now())
-    updated_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True),
+    updated_at:    Mapped[datetime] = mapped_column(DateTime(),
                                                     server_default=func.now(),
                                                     onupdate=func.now())
